@@ -4,6 +4,13 @@ TugasKu adalah aplikasi web sederhana untuk Bayu dan teman sekelasnya. Kamu
 bisa mencatat tugas, jadwal, deadline, lampiran, dan obrolan kelas dari HP.
 Semua kode berjalan sebagai file HTML, CSS, dan JavaScript biasa.
 
+## Versi live
+
+Database Supabase dan GitHub Pages sudah aktif. Kamu bisa langsung membuka
+aplikasi di [c175244.github.io/tugasku](https://c175244.github.io/tugasku/)
+dan membuat akun baru. Halaman Setup tidak perlu diisi lagi untuk penggunaan
+aplikasi live karena konfigurasi publiknya sudah ada di `assets/js/config.js`.
+
 ## Fitur lengkap
 
 1. Masuk dengan Google, email/password, atau magic link.
@@ -23,11 +30,15 @@ Semua kode berjalan sebagai file HTML, CSS, dan JavaScript biasa.
 
 ## Mulai cepat dalam tiga langkah
 
-1. Jalankan `supabase/schema.sql` mengikuti
-   [panduan setup database](docs/SETUP-DATABASE.md).
-2. Upload folder ini ke GitHub dan aktifkan Pages mengikuti
-   [panduan deploy](docs/DEPLOY-GITHUB-PAGES.md).
-3. Buka alamat Pages, lalu tempel Project URL dan anon key di halaman Setup.
+1. Buka [aplikasi live TugasKu](https://c175244.github.io/tugasku/).
+2. Tekan **Daftar**, lalu masukkan username, email, dan password. Konfirmasi
+   email sedang dimatikan agar akun baru bisa langsung dipakai.
+3. Buat kelas, bagikan kode room kepada teman, lalu mulai membuat tugas.
+
+Kalau kamu ingin membuat salinan project dengan Supabase sendiri, ikuti
+[panduan setup database](docs/SETUP-DATABASE.md) dan
+[panduan deploy](docs/DEPLOY-GITHUB-PAGES.md). Kamu tidak perlu menempelkan
+anon key ke halaman Setup pada project live ini.
 
 ## Struktur file
 

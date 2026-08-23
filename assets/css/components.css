@@ -325,6 +325,12 @@
   border-radius: 22px;
 }
 
+@media (min-width: 700px) {
+  .modal-backdrop {
+    place-items: center;
+  }
+}
+
 .loader {
   display: grid;
   place-items: center;

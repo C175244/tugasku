@@ -3,6 +3,30 @@
 Ikuti langkah bernomor ini satu per satu. Jangan memasukkan
 `service_role key` ke aplikasi.
 
+## Kondisi project TugasKu yang sudah live
+
+Project utama sudah dibuat dan dikonfigurasi, jadi Bayu tidak perlu mengulang
+langkah setup ini hanya untuk memakai aplikasi live.
+
+1. Buka [aplikasi live TugasKu](https://c175244.github.io/tugasku/).
+2. Supabase project berada di region **ap-southeast-1** dan alamatnya adalah
+   `https://zvzghjvavnmriqljzizp.supabase.co`.
+3. Schema database, 9 tabel, RLS, fungsi RPC, policy, realtime, dan bucket
+   private `task-files` sudah aktif.
+4. GitHub Pages sudah aktif di
+   `https://c175244.github.io/tugasku/`, dan konfigurasi URL publik aplikasi
+   sudah disimpan di `assets/js/config.js`. Jangan menyalin atau menulis ulang
+   anon key panjang ke dokumentasi.
+5. Email/password aktif. Konfirmasi email sedang **dimatikan**, sehingga akun
+   baru bisa langsung masuk saat testing.
+6. Login Google belum aktif. Langkah sisanya dijelaskan pada bagian Google
+   OAuth di bawah.
+
+Jika kamu hanya ingin memakai project utama, lanjutkan ke bagian
+[Menambah admin kedua](#6-menambah-admin-kedua). Bagian berikutnya berguna
+kalau kamu ingin membuat project Supabase sendiri atau mengubah pengaturan
+project.
+
 ## 1. Membuat project
 
 1. Buka [supabase.com](https://supabase.com) dari browser HP dan daftar.
@@ -26,6 +50,12 @@ Ikuti langkah bernomor ini satu per satu. Jangan memasukkan
    lalu hidupkan lagi nanti jika aplikasi sudah siap dipakai teman.
 5. Jika pilihan tetap aktif, gunakan alamat email yang benar-benar bisa kamu
    buka untuk menekan link konfirmasi.
+
+Pada project utama, pengaturan ini saat ini dimatikan (`mailer_autoconfirm =
+true`). Untuk menyalakannya, buka **Authentication → Providers → Email**,
+aktifkan **Confirm email**, lalu simpan. Setelah aktif, pengguna baru harus
+menekan link di email sebelum dapat masuk. Untuk testing awal, mematikannya
+memang lebih praktis.
 
 ## 3. Membuat Google OAuth
 
@@ -52,6 +82,23 @@ Ikuti langkah bernomor ini satu per satu. Jangan memasukkan
 15. Akun Google dalam mode testing hanya bisa dipakai test user. Agar teman
     sekelas dapat login, aplikasi OAuth perlu dipublikasikan sesuai proses
     verifikasi Google.
+
+### Sisa langkah Google OAuth pada project utama
+
+Pada project utama, Google provider belum aktif. Setelah membuat OAuth client
+di Google Cloud, gunakan nilai berikut:
+
+1. Pada **Authorized redirect URIs**, masukkan:
+   `https://zvzghjvavnmriqljzizp.supabase.co/auth/v1/callback`
+2. Pada **Authorized JavaScript origins**, masukkan:
+   `https://c175244.github.io`
+   (tanpa `/tugasku`).
+3. Di Supabase buka **Authentication → Providers → Google**.
+4. Tempel **Client ID** dan **Client Secret** dari Google Cloud, aktifkan
+   provider, lalu simpan.
+
+Jangan menaruh Client Secret di repository atau di halaman publik. Untuk
+project sendiri, ganti alamat callback dengan project ref milikmu.
 
 ## 4. Menyiapkan URL aplikasi
 

@@ -47,6 +47,9 @@ order by tablename;
    memperoleh file private tanpa policy dan signed URL yang sah.
 5. Jangan pernah commit `service_role key`. Key itu melewati RLS dan memiliki
    hak sangat besar. Simpan hanya di lingkungan server yang aman.
+6. Personal access token (PAT) Supabase juga merupakan rahasia. Jangan
+   membagikan atau memasukkan PAT ke commit, screenshot, chat, atau
+   `config.js`.
 
 ## 4. Jika key bocor
 
@@ -55,6 +58,13 @@ order by tablename;
 3. Ganti anon key di halaman Setup atau `assets/js/config.js`.
 4. Periksa commit lama dan hapus rahasia dari riwayat sesuai panduan GitHub.
 5. Jangan mematikan RLS sebagai cara memperbaiki error.
+
+Jika kamu pernah membuat personal access token Supabase untuk setup, segera
+revoke token tersebut setelah selesai dipakai melalui pengaturan akun Supabase.
+Buat token baru hanya saat benar-benar diperlukan, dan simpan di password
+manager. Anon key frontend berbeda dari PAT: anon key memang dirancang untuk
+berada di aplikasi publik, sedangkan PAT dan `service_role key` tidak boleh
+berada di browser.
 
 ## 5. Kebiasaan aman
 
