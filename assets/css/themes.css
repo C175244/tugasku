@@ -1,0 +1,26 @@
+/* Warna tema gelap dan fallback mengikuti preferensi perangkat. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #10152b;
+  --bg-2: #1c2445;
+  --text: #f1f4ff;
+  --muted: #aab2d1;
+  --panel: #1e294acc;
+  --panel-strong: #202b4ddd;
+  --line: #ffffff1d;
+  --shadow: 0 18px 55px #00000038;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --bg: #10152b;
+    --bg-2: #1c2445;
+    --text: #f1f4ff;
+    --muted: #aab2d1;
+    --panel: #1e294acc;
+    --panel-strong: #202b4ddd;
+    --line: #ffffff1d;
+    --shadow: 0 18px 55px #00000038;
+  }
+}

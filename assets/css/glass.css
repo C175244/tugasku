@@ -1,0 +1,40 @@
+/* Latar glassmorphism dan dekorasi gradien halaman. */
+body {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 10% 0%, var(--bg-2), transparent 35%),
+    var(--bg);
+}
+
+body::before,
+body::after {
+  position: fixed;
+  z-index: -1;
+  width: 35vw;
+  height: 35vw;
+  border-radius: 50%;
+  content: '';
+  filter: blur(45px);
+  opacity: .45;
+  pointer-events: none;
+}
+
+body::before {
+  top: 8%;
+  left: -12%;
+  background: #8c6ef244;
+}
+
+body::after {
+  right: -12%;
+  bottom: 12%;
+  background: #5c63e933;
+}
+
+.glass {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
+}

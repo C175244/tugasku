@@ -1,0 +1,20 @@
+/* Variabel warna dan ukuran dasar tema TugasKu. */
+:root {
+  color-scheme: light;
+  --bg: #f5f7ff;
+  --bg-2: #e7edff;
+  --text: #182447;
+  --muted: #68728d;
+  --panel: #ffffffaa;
+  --panel-strong: #ffffffdd;
+  --line: #ffffffb8;
+  --primary: #5c63e9;
+  --primary-2: #8c6ef2;
+  --green: #159b69;
+  --red: #dc4e63;
+  --amber: #d48624;
+  --radius: 20px;
+  --radius-sm: 14px;
+  --shadow: 0 18px 55px #384a8918;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}

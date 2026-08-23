@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Preview TugasKu</title>
+  <link rel="stylesheet" href="../assets/css/variables.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/glass.css">
+  <link rel="stylesheet" href="../assets/css/layout.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/themes.css">
+  <link rel="icon" href="../favicon.svg">
+  <style>
+    .preview-bar {
+      position: sticky;
+      z-index: 40;
+      top: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel-strong);
+      backdrop-filter: blur(18px);
+    }
+    .preview-bar select { max-width: 220px; }
+    .preview-note { margin: 0; }
+  </style>
+</head>
+<body>
+  <div class="preview-bar">
+    <strong>Preview TugasKu</strong>
+    <div class="row">
+      <label class="small">Tampilan
+        <select id="view-picker"></select>
+      </label>
+      <button id="theme-toggle" class="btn btn-soft" type="button">
+        Tema
+      </button>
+    </div>
+  </div>
+  <div id="preview-app"></div>
+  <script type="module">
+    import { setProgress } from '../assets/js/store.js';
+    import { applyTheme, getTheme, toggleTheme } from '../assets/js/theme.js';
+    import { dashboardView } from '../assets/js/views/dashboardView.js';
+    import { historyView } from '../assets/js/views/historyView.js';
+    import { classDetailView } from '../assets/js/views/classDetailView.js';
+    import { scheduleView } from '../assets/js/views/scheduleView.js';
+    import { taskDetailView } from '../assets/js/views/taskDetailView.js';
+    import { taskFormView } from '../assets/js/views/taskFormView.js';
+    import { profileView } from '../assets/js/views/profileView.js';
+    import { authView } from '../assets/js/views/authView.js';
+    import { setupView } from '../assets/js/views/setupView.js';
+
+    const now = Date.now();
+    const classId = '11111111-1111-4111-8111-111111111111';
+    const userId = '22222222-2222-4222-8222-222222222222';
+    const profile = {
+      username: 'bayu',
+      full_name: 'Bayu Pratama',
+      avatar_url: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" '
+        + 'width="80" height="80"%3E%3Crect width="80" height="80" rx="40" '
+        + 'fill="%235c63e9"/%3E%3Ctext x="40" y="52" text-anchor="middle" '
+        + 'font-size="34" fill="white"%3EB%3C/text%3E%3C/svg%3E',
+    };
+    const classes = [
+      { id: classId, name: 'XI IPA 1', room_code: 'ABC123', role: 'admin' },
+      {
+        id: '33333333-3333-4333-8333-333333333333',
+        name: 'Kelompok Fisika',
+        room_code: 'FIS456',
+        role: 'member',
+      },
+    ];
+    const future = new Date(now + 4 * 86400000).toISOString();
+    const near = new Date(now + 8 * 3600000).toISOString();
+    const past = new Date(now - 2 * 86400000).toISOString();
+    const tasks = [
+      {
+        id: '44444444-4444-4444-8444-444444444444',
+        class_id: classId,
+        created_by: userId,
+        title: 'Rangkuman bab ekosistem',
+        description: 'Baca halaman 20–35 dan tulis poin pentingnya.',
+        subject: 'Biologi',
+        task_type: 'tugas',
+        difficulty: 'sedang',
+        priority: 3,
+        deadline_mode: 'date',
+        deadline_at: future,
+        created_at: new Date(now - 86400000).toISOString(),
+      },
+      {
+        id: '55555555-5555-4555-8555-555555555555',
+        class_id: classId,
+        created_by: '66666666-6666-4666-8666-666666666666',
+        title: 'Latihan persamaan kuadrat',
+        subject: 'Matematika',
+        task_type: 'pr',
+        difficulty: 'sulit',
+        priority: 2,
+        deadline_mode: 'next_subject',
+        schedule_id: '77777777-7777-4777-8777-777777777777',
+        schedule_day: 1,
+        deadline_at: near,
+        created_at: new Date(now - 2 * 86400000).toISOString(),
+      },
+      {
+        id: '88888888-8888-4888-8888-888888888888',
+        class_id: classId,
+        created_by: '66666666-6666-4666-8666-666666666666',
+        title: 'Refleksi praktikum',
+        subject: 'Kimia',
+        task_type: 'praktik',
+        difficulty: 'mudah',
+        priority: 1,
+        deadline_mode: 'date',
+        deadline_at: past,
+        created_at: new Date(now - 7 * 86400000).toISOString(),
+      },
+    ];
+    const schedules = [
+      {
+        id: '77777777-7777-4777-8777-777777777777',
+        class_id: classId,
+        day_of_week: 1,
+        subject: 'Matematika',
+        teacher: 'Bu Rina',
+        start_time: '07:00:00',
+        end_time: '08:30:00',
+      },
+      {
+        id: '99999999-9999-4999-8999-999999999999',
+        class_id: classId,
+        day_of_week: 2,
+        subject: 'Biologi',
+        teacher: 'Pak Dedi',
+        start_time: '09:00:00',
+        end_time: '10:30:00',
+      },
+    ];
+    const members = [
+      { user_id: userId, username: 'bayu', role: 'admin' },
+      { user_id: '66666666-6666-4666-8666-666666666666', username: 'sinta', role: 'member' },
+    ];
+    const user = { id: userId, email: 'bayu@example.com' };
+    setProgress([
+      { task_id: tasks[0].id, status: 'done' },
+      { task_id: tasks[1].id, status: 'pending' },
+      { task_id: tasks[2].id, status: 'done' },
+    ]);
+
+    const app = document.querySelector('#preview-app');
+    const views = [
+      ['dashboard', 'Dashboard'],
+      ['detail', 'Detail tugas'],
+      ['class', 'Detail kelas'],
+      ['schedule', 'Jadwal'],
+      ['history', 'Riwayat'],
+      ['profile', 'Profil'],
+      ['auth', 'Auth'],
+      ['setup', 'Setup'],
+      ['form', 'Form tugas'],
+    ];
+    const picker = document.querySelector('#view-picker');
+    picker.append(...views.map(([value, label]) => {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = label;
+      return option;
+    }));
+    const query = new URLSearchParams(location.search);
+    picker.value = query.get('view') || 'dashboard';
+    const requestedTheme = query.get('theme');
+    if (requestedTheme === 'light' || requestedTheme === 'dark') {
+      applyTheme(requestedTheme);
+    }
+    document.querySelector('#theme-toggle').onclick = () => {
+      toggleTheme();
+      render();
+    };
+
+    const common = {
+      profile,
+      user,
+      classes,
+      tasks,
+      schedules,
+      onChanged: () => {},
+    };
+
+    const render = async () => {
+      applyTheme(getTheme());
+      const selected = picker.value;
+      let view;
+      if (selected === 'dashboard') view = dashboardView(common);
+      if (selected === 'detail') {
+        view = await taskDetailView({
+          ...common,
+          task: tasks[1],
+          previewData: { members, files: [], comments: [] },
+        });
+      }
+      if (selected === 'class') {
+        view = await classDetailView({
+          ...common,
+          classItem: classes[0],
+          schedules,
+          previewData: {
+            members,
+            comments: [{
+              user_id: members[1].user_id,
+              body: 'Besok jangan lupa bawa buku paket, ya.',
+              created_at: new Date(now - 3600000).toISOString(),
+            }],
+          },
+        });
+      }
+      if (selected === 'schedule') {
+        view = document.createElement('main');
+        view.className = 'shell';
+        view.append(
+          scheduleView({
+            classId,
+            schedules,
+            isAdmin: true,
+            onChanged: () => {},
+          }),
+        );
+      }
+      if (selected === 'history') view = historyView(common);
+      if (selected === 'profile') view = profileView(common);
+      if (selected === 'auth') view = authView('signin', () => {});
+      if (selected === 'setup') view = setupView(() => {});
+      if (selected === 'form') view = taskFormView(common);
+      app.replaceChildren(view);
+      document.title = `Preview · ${selected}`;
+      window.previewOverflow = document.documentElement.scrollWidth > innerWidth;
+      document.documentElement.dataset.overflow = String(window.previewOverflow);
+      document.documentElement.dataset.metrics =
+        `${innerWidth}x${document.documentElement.scrollWidth}`;
+      window.previewReady = true;
+    };
+    picker.onchange = render;
+    render().catch((error) => {
+      const message = document.createElement('pre');
+      message.textContent = error.stack || error.message;
+      app.replaceChildren(message);
+    });
+  </script>
+</body>
+</html>

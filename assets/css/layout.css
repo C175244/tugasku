@@ -1,0 +1,97 @@
+/* Layout shell, grid, baris, dan navigasi responsif. */
+.shell {
+  width: min(calc(100% - 28px), 980px);
+  min-width: 0;
+  margin: 0 auto;
+  padding: 18px 0 calc(92px + var(--safe-bottom));
+}
+
+.shell.center {
+  display: block;
+}
+
+.shell.center > .panel {
+  width: 100% !important;
+  max-width: calc(100vw - 28px) !important;
+  margin-inline: auto;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  font-size: 1.1rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.brand-mark {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 14px;
+  color: white;
+  background: linear-gradient(135deg, var(--primary), var(--primary-2));
+}
+
+.content {
+  display: grid;
+  gap: 18px;
+}
+
+.grid {
+  display: grid;
+  gap: 14px;
+}
+
+.grid-2 {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.space {
+  justify-content: space-between;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.center {
+  display: grid;
+  place-items: center;
+}
+
+.wide {
+  width: 100%;
+}
+
+@media (min-width: 700px) {
+  .shell {
+    padding-bottom: 32px;
+  }
+
+  .bottom-nav {
+    position: static !important;
+    margin-top: 24px;
+    border-radius: 18px;
+  }
+}

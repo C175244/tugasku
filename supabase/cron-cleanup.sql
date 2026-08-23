@@ -1,0 +1,9 @@
+-- Opsional: jalankan hanya jika ekstensi pg_cron tersedia di project kamu.
+-- Aktifkan pg_cron lewat Supabase Dashboard, lalu jalankan:
+-- select cron.schedule(
+--   'tugasku-hapus-tugas-lama',
+--   '15 2 * * *',
+--   $$select public.cleanup_expired_tasks_global(90);$$
+-- );
+--
+-- Jadwal di atas berjalan setiap hari pukul 02:15 UTC.

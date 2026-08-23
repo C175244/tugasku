@@ -1,0 +1,10 @@
+{
+  "name": "TugasKu",
+  "short_name": "TugasKu",
+  "start_url": "./#/dashboard",
+  "display": "standalone",
+  "background_color": "#f3f6ff",
+  "theme_color": "#5c63e9",
+  "description": "Catat dan selesaikan tugas sekolah bersama kelas.",
+  "icons": [{"src":"favicon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
