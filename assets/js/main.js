@@ -120,7 +120,7 @@ const render = async () => {
       signOut().catch(() => {});
       renderedUserId = null;
       toast('Sesi kamu sudah tidak berlaku, silakan masuk lagi.', 'error');
-      location.hash = '#/masuk';
+      location.hash = '#/auth/signin';
       return;
     }
     const classes = classesResult.data || [];
