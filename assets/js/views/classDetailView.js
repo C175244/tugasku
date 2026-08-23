@@ -46,7 +46,7 @@ export const classDetailView = async ({
         ),
         el('p', {}, comment.body),
         (own || isAdmin) && el('button', {
-          class: 'btn btn-soft small',
+          class: 'btn btn-danger-outline small',
           type: 'button',
           onclick: async () => {
             const result = await deleteComment('class_comments', comment.id);
@@ -109,7 +109,7 @@ export const classDetailView = async ({
   );
 
   const leave = el('button', {
-    class: 'btn btn-soft',
+    class: 'btn btn-danger-outline',
     type: 'button',
     onclick: async () => {
       if (!confirm('Keluar dari kelas ini?')) return;

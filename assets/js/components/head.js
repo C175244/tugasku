@@ -8,6 +8,6 @@ export const setHead = (title = 'TugasKu') => {
     document.head.append(theme);
   }
   theme.content = getComputedStyle(document.documentElement)
-    .getPropertyValue('--bg-2')
-    .trim() || '#e7edff';
+    .getPropertyValue('--surface-soft')
+    .trim() || '#f7f7f7';
 };

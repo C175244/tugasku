@@ -1,4 +1,4 @@
-/* Aturan elemen dasar dan kontrol agar layout responsif. */
+/* Aturan elemen dasar, font, dan kontrol interaktif. */
 * {
   box-sizing: border-box;
 }
@@ -10,10 +10,12 @@ body {
 }
 
 body {
-  background: var(--bg);
-  color: var(--text);
-  font: 15px/1.5 Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
-  transition: background .25s ease, color .25s ease;
+  background: var(--page-background);
+  color: var(--body);
+  font-family: Inter, Arial, Helvetica, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
 }
 
 button,
@@ -28,7 +30,7 @@ button {
 }
 
 a {
-  color: var(--primary);
+  color: var(--link-blue);
 }
 
 h1,
@@ -39,19 +41,24 @@ p {
 }
 
 h1 {
-  font-size: clamp(1.65rem, 7vw, 2.45rem);
-  line-height: 1.1;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.25;
 }
 
 h2 {
-  font-size: 1.35rem;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.25;
 }
 
 h3 {
-  font-size: 1rem;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.47;
 }
 
 ::selection {
   background: var(--primary);
-  color: white;
+  color: var(--ink);
 }

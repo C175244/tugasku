@@ -1,26 +1,26 @@
-/* Warna tema gelap dan fallback mengikuti preferensi perangkat. */
+/* Token permukaan mode terang dan gelap. */
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --bg: #10152b;
-  --bg-2: #1c2445;
-  --text: #f1f4ff;
-  --muted: #aab2d1;
-  --panel: #1e294acc;
-  --panel-strong: #202b4ddd;
-  --line: #ffffff1d;
-  --shadow: 0 18px 55px #00000038;
+  --page-background: var(--surface-dark);
+  --panel-surface: var(--surface-elevated);
+  --canvas: var(--surface-dark);
+  --body: var(--on-dark);
+  --ink: var(--on-dark);
+  --surface-soft: var(--surface-elevated);
+  --hairline: var(--hairline-strong);
+  --mute: var(--on-dark-mute);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
-    --bg: #10152b;
-    --bg-2: #1c2445;
-    --text: #f1f4ff;
-    --muted: #aab2d1;
-    --panel: #1e294acc;
-    --panel-strong: #202b4ddd;
-    --line: #ffffff1d;
-    --shadow: 0 18px 55px #00000038;
+    --page-background: var(--surface-dark);
+    --panel-surface: var(--surface-elevated);
+    --canvas: var(--surface-dark);
+    --body: var(--on-dark);
+    --ink: var(--on-dark);
+    --surface-soft: var(--surface-elevated);
+    --hairline: var(--hairline-strong);
+    --mute: var(--on-dark-mute);
   }
 }

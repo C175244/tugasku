@@ -114,7 +114,7 @@ export const scheduleView = ({
           ),
         }, 'Edit'),
         el('button', {
-          class: 'btn btn-soft',
+          class: 'btn btn-danger-outline',
           type: 'button',
           onclick: async () => {
             if (!confirm('Hapus jadwal ini?')) return;

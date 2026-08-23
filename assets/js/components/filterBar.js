@@ -15,7 +15,9 @@ export const filterBar = (options = {}, onChange) => {
     ...defaults,
     ...(JSON.parse(localStorage.getItem(STORAGE_KEYS.filters) || 'null') || {}),
   };
-  const wrap = el('div', { class: 'grid grid-2 glass panel' });
+  const wrap = el('div', {
+    class: 'grid grid-2 glass panel feature-panel',
+  });
   const add = (label, key, choices) => {
     const select = el(
       'select',

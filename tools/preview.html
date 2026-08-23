@@ -4,6 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Preview TugasKu</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap"
+    rel="stylesheet"
+  >
   <link rel="stylesheet" href="../assets/css/variables.css">
   <link rel="stylesheet" href="../assets/css/base.css">
   <link rel="stylesheet" href="../assets/css/glass.css">
@@ -21,9 +27,9 @@
       justify-content: space-between;
       gap: 12px;
       padding: 10px 14px;
-      border-bottom: 1px solid var(--line);
-      background: var(--panel-strong);
-      backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--hairline-strong);
+      background: var(--surface-dark);
+      color: var(--on-dark);
     }
     .preview-bar select { max-width: 220px; }
     .preview-note { margin: 0; }
@@ -63,7 +69,7 @@
       full_name: 'Bayu Pratama',
       avatar_url: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" '
         + 'width="80" height="80"%3E%3Crect width="80" height="80" rx="40" '
-        + 'fill="%235c63e9"/%3E%3Ctext x="40" y="52" text-anchor="middle" '
+        + 'fill="%2376b900"/%3E%3Ctext x="40" y="52" text-anchor="middle" '
         + 'font-size="34" fill="white"%3EB%3C/text%3E%3C/svg%3E',
     };
     const classes = [
@@ -154,6 +160,8 @@
     ]);
 
     const app = document.querySelector('#preview-app');
+    window.previewReady = false;
+    window.previewAssertions = null;
     const views = [
       ['dashboard', 'Dashboard'],
       ['detail', 'Detail tugas'],
@@ -190,6 +198,72 @@
       tasks,
       schedules,
       onChanged: () => {},
+    };
+
+    const styleAssertions = () => {
+      const forbidden = [...document.querySelectorAll('*')].filter((node) => {
+        const styles = getComputedStyle(node);
+        return (styles.backdropFilter
+          && styles.backdropFilter !== 'none')
+          || (styles.webkitBackdropFilter
+            && styles.webkitBackdropFilter !== 'none');
+      });
+      const cards = [...document.querySelectorAll('.panel, .task-card')];
+      const cardShadows = cards.filter(
+        (node) => getComputedStyle(node).boxShadow !== 'none',
+      );
+      const rounded = [
+        ...document.querySelectorAll(
+          '.panel, .task-card, .btn, input, select, textarea, .tab, .badge',
+        ),
+      ].filter((node) => {
+        const styles = getComputedStyle(node);
+        return parseFloat(styles.borderTopLeftRadius) > 2;
+      });
+      const svgs = [...document.querySelectorAll('svg')];
+      const invisibleSvgs = svgs.filter((node) => {
+        const hiddenNav = node.closest('.bottom-nav');
+        if (hiddenNav && getComputedStyle(hiddenNav).display === 'none') {
+          return false;
+        }
+        if (getComputedStyle(node).display === 'none') return false;
+        const box = node.getBoundingClientRect();
+        return box.width === 0 || box.height === 0;
+      });
+      const panelNodes = [
+        ...new Set(document.querySelectorAll(
+          '.panel, .task-card, .class-card, .feature-panel, .stat-card',
+        )),
+      ];
+      const panelSiblingGapFailures = [];
+      const parents = new Set(panelNodes.map((node) => node.parentElement));
+      parents.forEach((parent) => {
+        if (!parent) return;
+        const children = panelNodes
+          .filter((node) => node.parentElement === parent)
+          .filter((node) => getComputedStyle(node).display !== 'none')
+          .sort((a, b) => (
+            a.getBoundingClientRect().top - b.getBoundingClientRect().top
+          ));
+        children.slice(1).forEach((node, index) => {
+          const previous = children[index];
+          const currentBox = node.getBoundingClientRect();
+          const previousBox = previous.getBoundingClientRect();
+          const overlapsHorizontally = currentBox.left < previousBox.right
+            && previousBox.left < currentBox.right;
+          if (overlapsHorizontally
+            && currentBox.top - previousBox.bottom < 12) {
+            panelSiblingGapFailures.push(node);
+          }
+        });
+      });
+      return {
+        forbiddenEffects: forbidden.length,
+        cardShadows: cardShadows.length,
+        rounded: rounded.length,
+        invisibleSvgs: invisibleSvgs.length,
+        panelSiblingGapFailures: panelSiblingGapFailures.length,
+      };
     };
 
     const render = async () => {
@@ -242,6 +316,43 @@
       document.documentElement.dataset.overflow = String(window.previewOverflow);
       document.documentElement.dataset.metrics =
         `${innerWidth}x${document.documentElement.scrollWidth}`;
+      const beforeCountdown = [...document.querySelectorAll('.countdown')]
+        .map((node) => node.textContent);
+      const contextStrip = document.querySelector('.context-strip');
+      const firstContent = contextStrip?.parentElement?.nextElementSibling;
+      const contextSpacing = !contextStrip || !firstContent
+        || firstContent.getBoundingClientRect().top
+          > contextStrip.getBoundingClientRect().bottom;
+      const primaryButtons = [...document.querySelectorAll('.btn-primary')];
+      const primaryButtonFailures = primaryButtons.filter((node) => {
+        const styles = getComputedStyle(node);
+        return styles.color !== 'rgb(0, 0, 0)'
+          || styles.backgroundColor !== 'rgb(118, 185, 0)';
+      });
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      const afterCountdown = [...document.querySelectorAll('.countdown')]
+        .map((node) => node.textContent);
+      const countdownNonEmpty = afterCountdown.every((text) => text.trim());
+      let countdownChanged = beforeCountdown.every(
+        (text, index) => text !== afterCountdown[index]
+          || afterCountdown[index] === 'Lewat deadline',
+      );
+      if (!countdownChanged && beforeCountdown.length) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        const finalCountdown = [...document.querySelectorAll('.countdown')]
+          .map((node) => node.textContent);
+        countdownChanged = beforeCountdown.every(
+          (text, index) => text !== finalCountdown[index]
+            || finalCountdown[index] === 'Lewat deadline',
+        );
+      }
+      window.previewAssertions = {
+        countdownNonEmpty,
+        countdownChanged,
+        contextSpacing,
+        primaryButtonFailures: primaryButtonFailures.length,
+        svgAssertions: styleAssertions(),
+      };
       window.previewReady = true;
     };
     picker.onchange = render;

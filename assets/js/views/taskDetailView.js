@@ -60,7 +60,7 @@ export const taskDetailView = async ({
           rel: 'noreferrer',
         }, file.file_name),
         file.uploader_id === user.id && el('button', {
-          class: 'btn btn-soft',
+          class: 'btn btn-danger-outline',
           type: 'button',
           onclick: async () => {
             const result = await deleteFile(file);
@@ -83,7 +83,7 @@ export const taskDetailView = async ({
         ),
         el('p', {}, comment.body),
         comment.user_id === user.id && el('button', {
-          class: 'btn btn-soft small',
+          class: 'btn btn-danger-outline small',
           type: 'button',
           onclick: async () => {
             const result = await deleteComment('task_comments', comment.id);
@@ -98,7 +98,7 @@ export const taskDetailView = async ({
   renderComments();
 
   const currentStatus = el('button', {
-    class: `btn ${status === 'done' ? 'btn-success' : 'btn-danger'}`,
+    class: `btn ${status === 'done' ? 'btn-soft' : 'btn-primary'}`,
     type: 'button',
     onclick: async () => {
       const next = progressFor(task.id) === 'done' ? 'pending' : 'done';
@@ -168,7 +168,7 @@ export const taskDetailView = async ({
       href: `#/tugas/${task.id}/edit`,
     }, 'Edit'),
     canEdit && el('button', {
-      class: 'btn btn-soft',
+      class: 'btn btn-danger-outline',
       type: 'button',
       onclick: async () => {
         if (!confirm('Hapus tugas ini?')) return;

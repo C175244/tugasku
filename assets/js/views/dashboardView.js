@@ -68,7 +68,7 @@ export const dashboardView = ({
     header({ title: 'TugasKu' }),
     profileMenu(profile),
     hero(profile, classes),
-    el('div', { class: 'row space' },
+    el('div', { class: 'section-heading' },
       el('h2', {}, 'Tugas mendatang'),
       el('a', {
         class: 'btn btn-primary',

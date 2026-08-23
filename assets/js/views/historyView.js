@@ -31,7 +31,8 @@ export const historyView = ({ tasks, onChanged }) => {
       { class: 'stack' },
       taskCard(task, progressFor(task.id)),
       el('button', {
-        class: 'btn btn-soft',
+        class: 'btn btn-danger-outline',
+        type: 'button',
         onclick: async () => {
           if (!confirm('Hapus tugas ini?')) return;
           const result = await deleteTask(task.id);

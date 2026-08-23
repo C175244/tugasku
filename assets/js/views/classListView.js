@@ -8,13 +8,12 @@ import { createClass, joinClass } from '../api/classes.js';
 
 export const classListView = ({ classes, onChanged }) => {
   const cards = classes.map((item) => el(
-    'a',
-    {
-      class: 'panel glass',
-      href: `#/kelas/${item.id}`,
-      style: 'text-decoration:none;color:var(--text)',
-    },
-    el('div', { class: 'row space' },
+      'a',
+      {
+        class: 'panel glass class-card',
+        href: `#/kelas/${item.id}`,
+      },
+    el('div', { class: 'section-heading' },
       el('h3', {}, item.name),
       el('span', { class: 'badge' }, item.room_code),
     ),

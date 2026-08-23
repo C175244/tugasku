@@ -7,6 +7,8 @@ import {
   sendMagicLink,
 } from '../api/auth.js';
 import { toast } from '../components/toast.js';
+import { toggleTheme, getTheme } from '../theme.js';
+import { icon } from '../components/icons.js';
 
 export const authView = (mode = 'signin', onDone) => {
   const isSignUp = mode === 'signup';
@@ -81,13 +83,25 @@ export const authView = (mode = 'signin', onDone) => {
       type: 'submit',
     }, isSignUp ? 'Buat akun' : 'Masuk'),
   );
+  const themeButton = el('button', {
+    class: 'btn btn-soft icon-btn auth-theme',
+    type: 'button',
+    'aria-label': 'Ganti tema',
+    onclick: () => {
+      toggleTheme();
+      themeButton.replaceChildren(
+        icon(getTheme() === 'dark' ? 'sun' : 'moon'),
+      );
+    },
+  }, icon(getTheme() === 'dark' ? 'sun' : 'moon'));
 
   return el(
     'main',
-    { class: 'shell center' },
+    { class: 'shell center auth-shell' },
+    el('div', { class: 'auth-chrome' }, themeButton),
     el(
       'section',
-      { class: 'panel glass', style: 'max-width:480px;width:100%' },
+      { class: 'panel glass auth-card', style: 'max-width:480px;width:100%' },
       el('div', { class: 'brand' },
         el('span', { class: 'brand-mark' }, '✓'),
         'TugasKu',
