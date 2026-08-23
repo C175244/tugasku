@@ -1,7 +1,7 @@
 // Entry point TugasKu: memuat data, memilih route, dan merender view.
 import { getConfig } from './config.js';
 import { applyTheme } from './theme.js';
-import { getSession, onAuthChange } from './api/auth.js';
+import { getSession, onAuthChange, signOut } from './api/auth.js';
 import { getProfile } from './api/profile.js';
 import { listClasses, listMembers } from './api/classes.js';
 import { listSchedules } from './api/schedules.js';
@@ -26,6 +26,8 @@ import { startRealtime } from './realtime.js';
 applyTheme();
 const app = document.querySelector('#app');
 let stopRealtime = () => {};
+let renderGeneration = 0;
+let renderedUserId = null;
 
 const errorView = (error) => {
   const retry = document.createElement('button');
@@ -81,16 +83,24 @@ const enrichTasks = (tasks, schedules) => {
 };
 
 const render = async () => {
+  const generation = ++renderGeneration;
+  const isCurrent = () => generation === renderGeneration;
+  const previousStopRealtime = stopRealtime;
+  stopRealtime = () => {};
+  previousStopRealtime();
   app.replaceChildren(loader());
   const config = getConfig();
   if (!config.url || !config.anonKey) {
+    renderedUserId = null;
     setHead('Setup');
     app.replaceChildren(setupView(() => location.reload()));
     return;
   }
 
   const session = await getSession();
+  if (!isCurrent()) return;
   if (!session) {
+    renderedUserId = null;
     const current = route();
     setHead('Masuk');
     app.replaceChildren(authView(current.id || 'signin', () => {
@@ -105,11 +115,22 @@ const render = async () => {
       getProfile(),
       listClasses(),
     ]);
+    if (!isCurrent()) return;
+    if (!profile) {
+      await signOut().catch(() => {});
+      if (!isCurrent()) return;
+      renderedUserId = null;
+      toast('Sesi kamu sudah tidak berlaku, silakan masuk lagi.', 'error');
+      location.hash = '#/masuk';
+      return;
+    }
     const classes = classesResult.data || [];
     const classData = await loadClassData(classes, session.user.id);
+    if (!isCurrent()) return;
     const tasksResult = await Promise.all(
       classes.map((classItem) => listTasks(classItem.id)),
     );
+    if (!isCurrent()) return;
     const tasks = enrichTasks(
       tasksResult.flatMap((result) => result.data || []),
       classData.schedules,
@@ -117,6 +138,7 @@ const render = async () => {
     const progressResult = await Promise.all(
       classes.map((classItem) => listProgress(classItem.id)),
     );
+    if (!isCurrent()) return;
     store.user = session.user;
     store.profile = profile;
     store.classes = classData.roleClasses;
@@ -124,12 +146,16 @@ const render = async () => {
     store.tasks = tasks;
     setState({});
     setProgress(progressResult.flatMap((result) => result.data || []));
-    stopRealtime();
-    stopRealtime = startRealtime(
+    const realtimeStop = startRealtime(
       session.user,
       classes.map((item) => item.id),
       () => render(),
     );
+    if (!isCurrent()) {
+      realtimeStop();
+      return;
+    }
+    stopRealtime = realtimeStop;
     if (localStorage.getItem('tugasku.cleanup90') === 'true') {
       cleanupTasks().catch(() => {});
     }
@@ -192,14 +218,23 @@ const render = async () => {
     } else {
       view = dashboardView(common);
     }
+    if (!isCurrent()) return;
     setHead(current.name);
     app.replaceChildren(view);
+    renderedUserId = session.user.id;
   } catch (error) {
+    if (!isCurrent()) return;
     setHead('Ada masalah');
     app.replaceChildren(errorView(error));
   }
 };
 
-onAuthChange?.(() => render());
+onAuthChange?.((_event, session) => {
+  setTimeout(() => {
+    const userId = session?.user?.id || null;
+    if (userId === renderedUserId) return;
+    render();
+  }, 0);
+});
 window.addEventListener('hashchange', render);
 render();

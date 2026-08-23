@@ -5,7 +5,7 @@ export const getProfile = async () => {
   const { data, error } = await getSupabase()
     .from('profiles')
     .select('*')
-    .single();
+    .maybeSingle();
   if (error) throw error;
   return data;
 };
