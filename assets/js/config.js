@@ -8,8 +8,8 @@ import { STORAGE_KEYS } from './utils/storageKeys.js';
   3. Tekan Commit changes. Jangan pernah menaruh service_role key di sini.
   Kamu juga bisa memasukkan nilai ini lewat halaman Setup aplikasi.
 */
-export const SUPABASE_URL = '';
-export const SUPABASE_ANON_KEY = '';
+export const SUPABASE_URL = 'https://zvzghjvavnmriqljzizp.supabase.co';
+export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp2emdoanZhdm5tcmlxbGp6aXpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0ODc5MzQsImV4cCI6MjEwMzA2MzkzNH0.W3teRZF9zcDM1ThrJDMLOmvsh-YotcXUyLxfg6TVY-I';
 
 export const getConfig = () => ({
   url: localStorage.getItem(STORAGE_KEYS.url) || SUPABASE_URL,
