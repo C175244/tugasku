@@ -74,6 +74,10 @@
   margin-top: var(--space-xxl);
 }
 
+.auth-card > form + .row {
+  margin-top: var(--space-md);
+}
+
 .auth-chrome .btn-soft {
   color: var(--on-dark);
   border-color: var(--primary);
