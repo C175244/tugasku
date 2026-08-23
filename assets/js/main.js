@@ -117,8 +117,7 @@ const render = async () => {
     ]);
     if (!isCurrent()) return;
     if (!profile) {
-      await signOut().catch(() => {});
-      if (!isCurrent()) return;
+      signOut().catch(() => {});
       renderedUserId = null;
       toast('Sesi kamu sudah tidak berlaku, silakan masuk lagi.', 'error');
       location.hash = '#/masuk';
