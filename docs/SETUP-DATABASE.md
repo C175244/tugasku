@@ -188,27 +188,16 @@ File ini menambahkan:
 
 ## 11. Verifikasi anti-bot (Cloudflare Turnstile)
 
-Proteksi captcha sudah diaktifkan di Supabase (Authentication → Attack
-Protection, provider Turnstile). Saat ini masih memakai kunci uji resmi
-Cloudflare yang selalu lolos, supaya seluruh alur bisa diuji. Untuk proteksi
-sungguhan, ganti dengan kunci asli:
+Proteksi captcha sudah aktif penuh: site key asli tercantum di
+`assets/js/config.js` dan secret key tersimpan aman di Supabase
+(Authentication → Sign In / Up → Attack Protection, provider Turnstile).
+Secret key tidak boleh masuk repo.
 
-1. Buka
-   [dashboard Cloudflare Turnstile](https://dash.cloudflare.com/?to=/:account/turnstile),
-   tekan **Add site**, pilih mode **Managed**, dan daftarkan domain GitHub
-   Pages aplikasi (`c175244.github.io`).
-2. Salin **site key** ke `TURNSTILE_SITE_KEY` dan
-   `TURNSTILE_INVISIBLE_SITE_KEY` di `assets/js/config.js` (keduanya diisi
-   site key asli yang sama).
-3. Salin **secret key** ke Supabase: **Authentication → Sign In / Up →
-   Attack Protection → Enable Captcha protection**, pilih Turnstile, tempel
-   secret key, simpan. Secret key tidak boleh masuk repo.
-4. Setelah aktif: halaman konsol developer selalu menampilkan widget; di
-   aplikasi utama widget hanya muncul saat aktivitas komentar terdeteksi
-   tidak wajar; login utama memakai widget tak-kasat-mata sehingga pengguna
-   tidak melihat apa pun.
-5. Tanpa site key (kedua variabel dikosongkan), widget tidak ditampilkan dan
-   rate limit database tetap menjadi pagar.
+Perilaku saat aktif: halaman konsol developer selalu menampilkan widget; di
+aplikasi utama widget hanya muncul saat aktivitas komentar terdeteksi tidak
+wajar; login utama memakai widget tak-kasat-mata sehingga pengguna tidak
+melihat apa pun. Tanpa site key (kedua variabel dikosongkan), widget tidak
+ditampilkan dan rate limit database tetap menjadi pagar.
 
 ## 12. Batas panjang komentar (upgrade-04)
 

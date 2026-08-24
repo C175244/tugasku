@@ -11,13 +11,11 @@ import { STORAGE_KEYS } from './utils/storageKeys.js';
 export const SUPABASE_URL = 'https://zvzghjvavnmriqljzizp.supabase.co';
 export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp2emdoanZhdm5tcmlxbGp6aXpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0ODc5MzQsImV4cCI6MjEwMzA2MzkzNH0.W3teRZF9zcDM1ThrJDMLOmvsh-YotcXUyLxfg6TVY-I';
 
-// Site key Cloudflare Turnstile (captcha). Nilai di bawah adalah kunci uji
-// resmi Cloudflare yang selalu lolos — ganti dengan site key asli dari
-// https://dash.cloudflare.com/?to=/:account/turnstile untuk produksi
-// (isi kedua variabel dengan site key asli yang sama).
+// Site key Cloudflare Turnstile (captcha). Kedua variabel diisi site key asli
+// yang sama dari https://dash.cloudflare.com/?to=/:account/turnstile.
 // Kosongkan untuk mematikan verifikasi bukan robot (mode pengembangan).
-export const TURNSTILE_SITE_KEY = '1x00000000000000000000AA'; // widget tampak
-export const TURNSTILE_INVISIBLE_SITE_KEY = '1x00000000000000000000BB'; // widget tak kasat mata
+export const TURNSTILE_SITE_KEY = '0x4AAAAAAEaegM3pHq4uS0OD'; // widget tampak
+export const TURNSTILE_INVISIBLE_SITE_KEY = '0x4AAAAAAEaegM3pHq4uS0OD'; // widget tak kasat mata
 
 export const getConfig = () => ({
   url: localStorage.getItem(STORAGE_KEYS.url) || SUPABASE_URL,
