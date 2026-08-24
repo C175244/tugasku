@@ -13,7 +13,7 @@ import { setHead } from './components/head.js';
 import { loader } from './components/loader.js';
 import { toast } from './components/toast.js';
 import { setupView } from './views/setupView.js';
-import { authView } from './views/authView.js';
+import { authView, resetSessionView } from './views/authView.js';
 import { dashboardView } from './views/dashboardView.js';
 import { historyView } from './views/historyView.js';
 import { classListView } from './views/classListView.js';
@@ -21,6 +21,11 @@ import { classDetailView } from './views/classDetailView.js';
 import { taskFormView } from './views/taskFormView.js';
 import { taskDetailView } from './views/taskDetailView.js';
 import { profileView } from './views/profileView.js';
+import {
+  announcementView,
+  showLatestAnnouncement,
+} from './views/announcementView.js';
+import { listAnnouncements } from './api/announcements.js';
 import { startRealtime } from './realtime.js';
 import { isDeveloper, listDeveloperClasses } from './api/developer.js';
 import { myBanStatus } from './api/moderation.js';
@@ -129,6 +134,14 @@ const render = async () => {
 
   const session = await getSession();
   if (!isCurrent()) return;
+  // Pengguna yang menekan link recovery dari email diarahkan ke sini.
+  const incoming = route();
+  if (incoming.name === 'auth' && incoming.id === 'reset') {
+    renderedUserId = null;
+    setHead('Pasang password');
+    app.replaceChildren(resetSessionView());
+    return;
+  }
   if (!session) {
     renderedUserId = null;
     const current = route();
@@ -196,6 +209,8 @@ const render = async () => {
     if (localStorage.getItem('tugasku.cleanup90') === 'true') {
       cleanupTasks().catch(() => {});
     }
+    // Popup pengumuman terbaru (sekali per pesan) untuk semua pengguna.
+    showLatestAnnouncement().catch(() => {});
 
     const current = route();
     const common = {
@@ -250,6 +265,11 @@ const render = async () => {
       view = await taskDetailView({ ...common, task });
     } else if (current.name === 'riwayat') {
       view = historyView(common);
+    } else if (current.name === 'pengumuman') {
+      const announcementResult = await listAnnouncements();
+      if (!isCurrent()) return;
+      if (announcementResult.error) throw announcementResult.error;
+      view = announcementView({ announcements: announcementResult.data || [] });
     } else if (current.name === 'profil') {
       const developerResult = await isDeveloper();
       if (developerResult.error) throw developerResult.error;
@@ -277,8 +297,14 @@ const render = async () => {
   }
 };
 
-onAuthChange?.((_event, session) => {
+onAuthChange?.((event, session) => {
   setTimeout(() => {
+    // Sesi recovery dibuat saat pengguna menekan link di email reset.
+    if (event === 'PASSWORD_RECOVERY') {
+      location.hash = '#/auth/reset';
+      render();
+      return;
+    }
     const userId = session?.user?.id || null;
     if (userId === renderedUserId) return;
     render();

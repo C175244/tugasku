@@ -148,6 +148,52 @@ const forgotView = () => {
   return el('main', { class: 'shell center auth-shell' }, card);
 };
 
+// Halaman pasang password baru saat pengguna datang lewat link recovery
+// dari email (sesi recovery aktif), bukan lewat kode.
+export const resetSessionView = () => {
+  const newPassword = el('input', {
+    type: 'password',
+    required: true,
+    minlength: '6',
+    placeholder: 'Minimal 6 karakter',
+    autocomplete: 'new-password',
+  });
+  const error = el('p', { class: 'error' });
+  const form = el('form', {
+    class: 'stack',
+    onsubmit: async (event) => {
+      event.preventDefault();
+      error.textContent = '';
+      try {
+        const result = await updatePassword(newPassword.value);
+        if (result.error) throw result.error;
+        toast('Password baru tersimpan.');
+        location.hash = '#/dashboard';
+      } catch (err) {
+        error.textContent = err.message || 'Sesi kedaluwarsa. Minta kode baru.';
+      }
+    },
+  },
+  el('div', { class: 'field' }, el('label', {}, 'Password baru'), newPassword),
+  error,
+  el('button', { class: 'btn btn-primary wide', type: 'submit' },
+    'Simpan password baru'),
+  );
+  return el('main', { class: 'shell center auth-shell' },
+    el('section', {
+      class: 'panel glass auth-card',
+      style: 'max-width:480px;width:100%',
+    },
+    el('div', { class: 'brand' },
+      el('span', { class: 'brand-mark' }, '✓'),
+      'TugasKu',
+    ),
+    el('h1', {}, 'Pasang password baru'),
+    el('p', { class: 'muted small' },
+      'Kamu datang lewat link dari email. Pasang password barumu.'),
+    form));
+};
+
 export const authView = (mode = 'signin', onDone) => {
   if (mode === 'forgot') return forgotView();
   const isSignUp = mode === 'signup';

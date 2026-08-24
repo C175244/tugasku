@@ -52,6 +52,7 @@ export const header = ({ title = 'TugasKu', back = false, onBack } = {}) => {
         el('a', { href: '#/dashboard' }, 'Beranda'),
         el('a', { href: '#/kelas' }, 'Kelas'),
         el('a', { href: '#/riwayat' }, 'Riwayat'),
+        el('a', { href: '#/pengumuman' }, 'Pengumuman'),
         el('a', { href: '#/profil' }, 'Profil'),
       ),
       controls,

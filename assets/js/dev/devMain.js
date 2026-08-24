@@ -11,7 +11,14 @@ import {
   turnstileAvailable,
 } from '../components/turnstile.js';
 import { getSupabase } from '../supabaseClient.js';
-import { getSession, signOut, signInGoogle } from '../api/auth.js';
+import {
+  getSession,
+  signOut,
+  signInGoogle,
+  requestPasswordReset,
+  verifyRecoveryOtp,
+  updatePassword,
+} from '../api/auth.js';
 import {
   isDeveloper,
   listDeveloperClasses,
@@ -23,7 +30,8 @@ import {
 } from '../api/developer.js';
 import { deleteClass } from '../api/destructive.js';
 import { setHead } from '../components/head.js';
-import { relativeTime } from '../utils/datetime.js';
+import { relativeTime, formatDeadline } from '../utils/datetime.js';
+import { listAnnouncements, sendAnnouncement } from '../api/announcements.js';
 import { roleLabel } from '../utils/roles.js';
 
 applyTheme();
@@ -59,6 +67,79 @@ const centerShell = (...children) => el(
   { class: 'shell center' },
   el('section', { class: 'panel glass stack' }, ...children),
 );
+
+// Alur lupa password di konsol developer: minta kode (dengan token captcha
+// widget yang tampil di halaman ini), verifikasi kode, pasang password baru.
+const forgotDialog = (initialEmail, getCaptchaToken) => {
+  const email = el('input', {
+    type: 'email',
+    required: true,
+    value: initialEmail || '',
+    placeholder: 'nama@email.com',
+  });
+  const code = el('input', {
+    inputmode: 'numeric',
+    maxlength: '8',
+    placeholder: '8 digit kode dari email',
+    autocomplete: 'one-time-code',
+  });
+  const newPassword = el('input', {
+    type: 'password',
+    minlength: '6',
+    placeholder: 'Minimal 6 karakter',
+    autocomplete: 'new-password',
+  });
+  const error = el('p', { class: 'error' });
+  let sent = false;
+  const submit = el('button', {
+    class: 'btn btn-primary wide',
+    type: 'submit',
+  }, 'Kirim kode ke email');
+
+  // Kolom kode/password baru ditampilkan setelah kode terkirim.
+  const codeStep = el('div', {
+    class: 'stack',
+    style: 'display:none',
+  },
+  el('div', { class: 'field' }, el('label', {}, 'Kode dari email'), code),
+  el('div', { class: 'field' }, el('label', {}, 'Password baru'), newPassword));
+
+  const form = el('form', {
+    class: 'stack',
+    onsubmit: async (event) => {
+      event.preventDefault();
+      error.textContent = '';
+      submit.disabled = true;
+      try {
+        if (!sent) {
+          const captchaToken = await getCaptchaToken();
+          const result = await requestPasswordReset(email.value.trim(), captchaToken);
+          if (result.error) throw result.error;
+          sent = true;
+          toast(`Kode dikirim ke ${email.value.trim()}.`);
+          submit.textContent = 'Simpan password baru';
+          codeStep.style.display = '';
+          return;
+        }
+        const check = await verifyRecoveryOtp(email.value.trim(), code.value.trim());
+        if (check.error) throw check.error;
+        const result = await updatePassword(newPassword.value);
+        if (result.error) throw result.error;
+        toast('Password baru tersimpan. Silakan masuk.');
+        document.querySelector('.modal-backdrop')?.remove();
+      } catch (err) {
+        error.textContent = err.message || 'Kode salah atau kedaluwarsa.';
+      } finally {
+        submit.disabled = false;
+      }
+    },
+  },
+  el('div', { class: 'field' }, el('label', {}, 'Email'), email),
+  codeStep,
+  error,
+  submit);
+  openModal('Lupa password', form);
+};
 
 const loginView = () => {
   const email = el('input', {
@@ -120,6 +201,20 @@ const loginView = () => {
     },
   }, 'Masuk dengan Google');
 
+  const forgotButton = el('button', {
+    class: 'btn btn-soft',
+    type: 'button',
+    onclick: () => forgotDialog(
+      email.value.trim(),
+      async () => {
+        if (turnstileAvailable() && !captchaToken) {
+          throw new Error('Selesaikan dulu verifikasi bukan robot.');
+        }
+        return captchaToken;
+      },
+    ),
+  }, 'Lupa password');
+
   if (turnstileAvailable()) {
     mountTurnstile(captchaBox, (token) => { captchaToken = token; })
       .catch((error) => toast(error.message, 'error'));
@@ -135,6 +230,7 @@ const loginView = () => {
       'Halaman ini hanya untuk akun yang terdaftar sebagai developer.'),
     form,
     googleButton,
+    forgotButton,
   );
 };
 
@@ -277,7 +373,52 @@ const userRow = (row, selfId, onChanged) => el('tr', {},
   ),
 );
 
-const dashboardView = (session, users, classes, onChanged) => {
+// Panel pengumuman: developer menulis pesan yang muncul sebagai popup di
+// aplikasi utama untuk semua pengguna, plus riwayat pesan terkirim.
+const announcementPanel = (announcements, onChanged) => {
+  const input = el('textarea', {
+    rows: '3',
+    maxlength: '2000',
+    required: true,
+    placeholder: 'Tulis pengumuman untuk semua pengguna...',
+  });
+  const error = el('p', { class: 'error' });
+  const form = el('form', {
+    class: 'stack',
+    onsubmit: async (event) => {
+      event.preventDefault();
+      error.textContent = '';
+      const result = await sendAnnouncement(input.value);
+      if (result.error) {
+        error.textContent = result.error.message;
+        return;
+      }
+      input.value = '';
+      toast('Pengumuman terkirim ke semua pengguna.');
+      onChanged();
+    },
+  },
+  el('div', { class: 'field' }, el('label', {}, 'Pesan'), input),
+  error,
+  el('button', { class: 'btn btn-primary', type: 'submit' },
+    'Kirim ke semua pengguna'),
+  );
+  return el('section', { class: 'panel glass stack' },
+    el('h2', {}, 'Pengumuman untuk semua pengguna'),
+    form,
+    el('h3', {}, 'Riwayat pengumuman'),
+    announcements.length
+      ? el('div', { class: 'stack' },
+        ...announcements.map((item) => el('div', { class: 'stack' },
+          el('p', { class: 'muted small' }, formatDeadline(item.created_at)),
+          el('p', { style: 'white-space:pre-wrap;margin:0' }, item.body),
+        )),
+      )
+      : el('p', { class: 'muted' }, 'Belum ada pengumuman terkirim.'),
+  );
+};
+
+const dashboardView = (session, users, classes, announcements, onChanged) => {
   const search = el('input', {
     type: 'search',
     placeholder: 'Cari nama, username, atau email...',
@@ -335,6 +476,7 @@ const dashboardView = (session, users, classes, onChanged) => {
       el('div', { class: 'field' }, search),
       tableWrap,
     ),
+    announcementPanel(announcements, onChanged),
     el('section', { class: 'panel glass' },
       el('h2', {}, 'Semua kelas'),
       classes.length
@@ -397,9 +539,10 @@ const render = async () => {
     app.replaceChildren(deniedView());
     return;
   }
-  const [usersResult, classesResult] = await Promise.all([
+  const [usersResult, classesResult, announcementsResult] = await Promise.all([
     listDeveloperUsers(),
     listDeveloperClasses(),
+    listAnnouncements(),
   ]);
   if (usersResult.error) {
     toast(usersResult.error.message, 'error');
@@ -410,6 +553,7 @@ const render = async () => {
     session,
     usersResult.data || [],
     classesResult.data || [],
+    announcementsResult.data || [],
     render,
   ));
 };

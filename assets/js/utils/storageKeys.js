@@ -5,4 +5,5 @@ export const STORAGE_KEYS = {
   theme: 'tugasku.theme',
   filters: 'tugasku.filters',
   cleanup: 'tugasku.cleanup90',
+  announcementSeen: 'tugasku.announcementSeen',
 };

@@ -13,6 +13,7 @@ import {
 import { deleteMyAccount, deleteClass } from '../api/destructive.js';
 import { toast } from '../components/toast.js';
 import { openDestructiveDialog } from '../components/modal.js';
+import { invisibleCaptcha } from '../components/turnstile.js';
 import { progressFor } from '../store.js';
 import { roleLabel } from '../utils/roles.js';
 
@@ -27,6 +28,13 @@ const passwordSection = (user) => {
     : 'Akunmu masuk lewat Google dan belum punya password. Pasang password supaya bisa masuk dengan email juga. Kode verifikasi dikirim ke email akunmu.';
   const error = el('p', { class: 'error' });
   let sent = false;
+  // Captcha tak-kasat-mata — server menolak permintaan reset tanpa token.
+  const getCaptchaToken = invisibleCaptcha();
+
+  const requestCode = async () => {
+    const captchaToken = await getCaptchaToken();
+    return requestPasswordReset(email, captchaToken);
+  };
 
   const sendCode = el('button', {
     class: 'btn btn-soft',
@@ -35,7 +43,7 @@ const passwordSection = (user) => {
       error.textContent = '';
       sendCode.disabled = true;
       try {
-        const result = await requestPasswordReset(email);
+        const result = await requestCode();
         if (result.error) throw result.error;
         sent = true;
         toast(`Kode dikirim ke ${email}. Cek kotak masuk atau folder spam.`);
@@ -98,7 +106,7 @@ const passwordSection = (user) => {
       class: 'btn btn-soft',
       type: 'button',
       onclick: async () => {
-        const result = await requestPasswordReset(email);
+        const result = await requestCode();
         if (result.error) toast(result.error.message, 'error');
         else toast('Kode baru dikirim ulang.');
       },
