@@ -39,3 +39,36 @@ export const mountTurnstile = async (container, onToken) => {
 export const resetTurnstile = (widgetId) => {
   if (widgetId != null && window.turnstile) window.turnstile.reset(widgetId);
 };
+
+// Widget tak-kasat-mata untuk alur autentikasi biasa: pengguna normal tidak
+// melihat apa pun, tetapi token captcha tetap dikirim dan diverifikasi server.
+// Mengembalikan fungsi async yang menghasilkan token sekali pakai.
+export const invisibleCaptcha = () => {
+  let widgetId = null;
+  let pendingResolve = null;
+  return async () => {
+    if (!turnstileAvailable()) return null;
+    await loadScript();
+    if (widgetId == null) {
+      const container = document.createElement('div');
+      container.style.display = 'none';
+      document.body.append(container);
+      widgetId = window.turnstile.render(container, {
+        sitekey: getConfig().turnstileInvisibleSiteKey,
+        size: 'invisible',
+        callback: (token) => {
+          pendingResolve?.(token);
+          pendingResolve = null;
+        },
+        'error-callback': () => {
+          pendingResolve?.(null);
+          pendingResolve = null;
+        },
+      });
+    }
+    return new Promise((resolve) => {
+      pendingResolve = resolve;
+      window.turnstile.execute(widgetId);
+    });
+  };
+};

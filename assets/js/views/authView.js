@@ -7,11 +7,13 @@ import {
   sendMagicLink,
 } from '../api/auth.js';
 import { toast } from '../components/toast.js';
+import { invisibleCaptcha } from '../components/turnstile.js';
 import { toggleTheme, getTheme } from '../theme.js';
 import { icon } from '../components/icons.js';
 
 export const authView = (mode = 'signin', onDone) => {
   const isSignUp = mode === 'signup';
+  const getCaptchaToken = invisibleCaptcha();
   const email = el('input', {
     type: 'email',
     required: true,
@@ -38,9 +40,10 @@ export const authView = (mode = 'signin', onDone) => {
     event.preventDefault();
     error.textContent = '';
     try {
+      const captchaToken = await getCaptchaToken();
       const result = isSignUp
-        ? await signUp(email.value, password.value, username.value)
-        : await signIn(email.value, password.value);
+        ? await signUp(email.value, password.value, username.value, captchaToken)
+        : await signIn(email.value, password.value, captchaToken);
       if (result.error) throw result.error;
       toast(isSignUp
         ? 'Akun dibuat! Cek email kalau diminta.'
@@ -58,7 +61,8 @@ export const authView = (mode = 'signin', onDone) => {
 
   const magic = async () => {
     try {
-      await sendMagicLink(email.value);
+      const captchaToken = await getCaptchaToken();
+      await sendMagicLink(email.value, captchaToken);
       toast('Link masuk dikirim ke email.');
     } catch (err) {
       error.textContent = err.message || 'Link tidak bisa dikirim.';

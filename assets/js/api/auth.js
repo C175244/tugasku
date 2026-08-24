@@ -16,20 +16,27 @@ export const signInGoogle = async () => {
   });
 };
 
-export const signUp = (email, password, username) => getSupabase().auth.signUp({
+export const signUp = (email, password, username, captchaToken = null) => getSupabase().auth.signUp({
   email,
   password,
-  options: { data: { username } },
+  options: {
+    data: { username },
+    ...(captchaToken ? { captchaToken } : {}),
+  },
 });
 
-export const signIn = (email, password) => getSupabase().auth.signInWithPassword({
+export const signIn = (email, password, captchaToken = null) => getSupabase().auth.signInWithPassword({
   email,
   password,
+  options: captchaToken ? { captchaToken } : {},
 });
 
-export const sendMagicLink = (email) => getSupabase().auth.signInWithOtp({
+export const sendMagicLink = (email, captchaToken = null) => getSupabase().auth.signInWithOtp({
   email,
-  options: { emailRedirectTo: `${location.origin}${location.pathname}` },
+  options: {
+    emailRedirectTo: `${location.origin}${location.pathname}`,
+    ...(captchaToken ? { captchaToken } : {}),
+  },
 });
 
 export const signOut = () => getSupabase().auth.signOut();
