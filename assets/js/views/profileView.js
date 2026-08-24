@@ -4,11 +4,13 @@ import { header, profileMenu } from '../components/header.js';
 import { bottomNav } from '../components/navTabs.js';
 import { updateProfile } from '../api/profile.js';
 import { signOut } from '../api/auth.js';
+import { deleteMyAccount, deleteClass } from '../api/destructive.js';
 import { toast } from '../components/toast.js';
+import { openDestructiveDialog } from '../components/modal.js';
 import { progressFor } from '../store.js';
 import { roleLabel } from '../utils/roles.js';
 
-const developerOverview = (classes) => el(
+const developerOverview = (classes, onDeleteClass) => el(
   'section',
   { class: 'panel glass developer-overview' },
   el('div', { class: 'section-heading' },
@@ -31,6 +33,7 @@ const developerOverview = (classes) => el(
             el('th', {}, 'Tugas'),
             el('th', {}, 'Lampiran'),
             el('th', {}, 'Komentar'),
+            el('th', {}, 'Aksi'),
           ),
         ),
         el('tbody', {},
@@ -42,6 +45,13 @@ const developerOverview = (classes) => el(
             el('td', {}, String(item.task_count)),
             el('td', {}, String(item.file_count)),
             el('td', {}, String(item.comment_count)),
+            el('td', {},
+              el('button', {
+                class: 'btn btn-danger-outline small delete-overview-class-button',
+                type: 'button',
+                onclick: () => onDeleteClass(item),
+              }, 'Hapus kelas'),
+            ),
           )),
         ),
       ),
@@ -56,6 +66,7 @@ export const profileView = async ({
   user,
   onChanged,
   developerData = null,
+  previewData = null,
 }) => {
   const overview = developerData || { isDeveloper: false, classes: [] };
   const username = el('input', {
@@ -117,6 +128,39 @@ export const profileView = async ({
       location.hash = '#/auth/signin';
     },
   }, 'Keluar dari akun');
+  const confirmDeleteClass = (classItem) => openDestructiveDialog({
+    title: 'Hapus kelas ini?',
+    consequence: 'Seluruh jadwal, tugas, komentar, dan lampiran kelas ini akan dihapus permanen dan tidak bisa dikembalikan.',
+    actionLabel: 'Hapus kelas',
+    onConfirm: async () => {
+      const result = developerData?.onDeleteClass
+        ? await developerData.onDeleteClass(classItem.class_id)
+        : await deleteClass(classItem.class_id);
+      if (result?.error) return result;
+      toast('Kelas berhasil dihapus.');
+      onChanged?.();
+      return result;
+    },
+  });
+  const deleteAccount = el('button', {
+    class: 'btn btn-danger-outline delete-account-button',
+    type: 'button',
+    onclick: () => openDestructiveDialog({
+      title: 'Hapus akun ini?',
+      consequence: 'Seluruh data akun ini, termasuk kelas yang kamu miliki, akan dihapus permanen dan tidak bisa dikembalikan.',
+      actionLabel: 'Hapus akun',
+      onConfirm: async () => {
+        const result = previewData?.onDeleteAccount
+          ? await previewData.onDeleteAccount()
+          : await deleteMyAccount();
+        if (result?.error) return result;
+        await signOut().catch(() => {});
+        toast('Akun berhasil dihapus. Sampai jumpa.');
+        location.hash = '#/auth/signin';
+        return result;
+      },
+    }),
+  }, 'Hapus akun');
 
   return el(
     'main',
@@ -156,7 +200,11 @@ export const profileView = async ({
       ),
     ),
     logout,
-    overview.isDeveloper && developerOverview(overview.classes),
+    deleteAccount,
+    overview.isDeveloper && developerOverview(
+      overview.classes,
+      confirmDeleteClass,
+    ),
     bottomNav('profil'),
   );
 };

@@ -9,12 +9,14 @@ import {
   setMemberRole,
   leaveClass,
 } from '../api/classes.js';
+import { deleteClass } from '../api/destructive.js';
 import {
   listClassComments,
   addClassComment,
   deleteComment,
 } from '../api/comments.js';
 import { toast } from '../components/toast.js';
+import { openDestructiveDialog } from '../components/modal.js';
 import { relativeTime } from '../utils/datetime.js';
 import {
   isAdminOrHigher,
@@ -162,6 +164,24 @@ export const classDetailView = async ({
       else location.hash = '#/kelas';
     },
   }, 'Keluar dari kelas');
+  const deleteClassButton = canManageMembers && el('button', {
+    class: 'btn btn-danger-outline delete-class-button',
+    type: 'button',
+    onclick: () => openDestructiveDialog({
+      title: 'Hapus kelas ini?',
+      consequence: 'Seluruh jadwal, tugas, komentar, dan lampiran kelas ini akan dihapus permanen dan tidak bisa dikembalikan.',
+      actionLabel: 'Hapus kelas',
+      onConfirm: async () => {
+        const result = previewData?.onDeleteClass
+          ? await previewData.onDeleteClass(classItem.id)
+          : await deleteClass(classItem.id);
+        if (result?.error) return result;
+        toast('Kelas berhasil dihapus.');
+        location.hash = '#/kelas';
+        return result;
+      },
+    }),
+  }, 'Hapus kelas');
 
   return el(
     'main',
@@ -192,6 +212,7 @@ export const classDetailView = async ({
           )}`,
         }, 'Bagikan WhatsApp'),
         leave,
+        deleteClassButton,
       ),
     ),
     el('section', { class: 'panel glass' },

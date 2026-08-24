@@ -535,6 +535,61 @@
   background: var(--panel-surface);
 }
 
+.destructive-dialog .modal {
+  border-color: var(--error);
+}
+
+.destructive-dialog-content {
+  margin-top: var(--space-lg);
+}
+
+.destructive-dialog-step {
+  gap: var(--space-lg);
+}
+
+.destructive-dialog-step > p {
+  margin: 0;
+}
+
+.destructive-dialog-code {
+  display: block;
+  padding: var(--space-lg);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  background: var(--surface-soft);
+  font-size: 28px;
+  letter-spacing: .18em;
+  line-height: 1.25;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.destructive-dialog-input {
+  width: 100%;
+  min-height: 44px;
+  padding: 12px 16px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  background: var(--canvas);
+  font-size: 16px;
+  letter-spacing: .08em;
+  text-align: center;
+}
+
+.destructive-dialog-actions {
+  justify-content: flex-end;
+}
+
+.destructive-dialog-error {
+  margin: 0;
+}
+
+.developer-overview .btn.small {
+  white-space: nowrap;
+}
+
 .loader {
   display: grid;
   place-items: center;

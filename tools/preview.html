@@ -227,6 +227,7 @@
     const query = new URLSearchParams(location.search);
     picker.value = query.get('view') || 'dashboard';
     const previewRole = query.get('role') === 'member' ? 'member' : 'owner';
+    const previewDeveloper = query.get('developer') === 'true';
     const requestedTheme = query.get('theme');
     if (requestedTheme === 'light' || requestedTheme === 'dark') {
       applyTheme(requestedTheme);
@@ -243,6 +244,24 @@
       tasks,
       schedules,
       onChanged: () => {},
+    };
+    const previewActions = {
+      onDeleteClass: async () => ({}),
+      onDeleteAccount: async () => ({}),
+    };
+    const previewDeveloperData = {
+      isDeveloper: true,
+      classes: [{
+        class_id: classId,
+        class_name: 'XI IPA 1',
+        room_code: 'ABC123',
+        owner_username: 'bayu',
+        member_count: 2,
+        task_count: 3,
+        file_count: 3,
+        comment_count: 2,
+      }],
+      onDeleteClass: previewActions.onDeleteClass,
     };
 
     const styleAssertions = () => {
@@ -358,6 +377,7 @@
                 created_at: new Date(now - 900000).toISOString(),
               },
             ],
+            onDeleteClass: previewActions.onDeleteClass,
           },
         });
       }
@@ -377,13 +397,38 @@
       if (selected === 'profile') {
         view = await profileView({
           ...common,
-          developerData: { isDeveloper: false, classes: [] },
+          developerData: previewDeveloper
+            ? previewDeveloperData
+            : { isDeveloper: false, classes: [] },
+          previewData: previewActions,
         });
       }
       if (selected === 'auth') view = authView('signin', () => {});
       if (selected === 'setup') view = setupView(() => {});
       if (selected === 'form') view = taskFormView(common);
       app.replaceChildren(view);
+      const dialogTarget = query.get('dialog');
+      if (dialogTarget === 'class') {
+        document.querySelector('.delete-class-button')?.click();
+      }
+      if (dialogTarget === 'profile') {
+        document.querySelector('.delete-account-button')?.click();
+      }
+      if (query.get('step') === 'code') {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        const dialog = document.querySelector('.destructive-dialog');
+        [...dialog?.querySelectorAll('button') || []]
+          .find((button) => button.textContent === 'Lanjutkan')
+          ?.click();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        const input = dialog?.querySelector('.destructive-dialog-input');
+        if (input) {
+          input.value = query.get('code') === 'correct'
+            ? dialog.dataset.confirmationCode
+            : 'AAAAAA';
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      }
       document.title = `Preview · ${selected}`;
       window.previewOverflow = document.documentElement.scrollWidth > innerWidth;
       document.documentElement.dataset.overflow = String(window.previewOverflow);
