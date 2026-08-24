@@ -5,13 +5,151 @@ import {
   signUp,
   signInGoogle,
   sendMagicLink,
+  requestPasswordReset,
+  verifyRecoveryOtp,
+  updatePassword,
 } from '../api/auth.js';
 import { toast } from '../components/toast.js';
 import { invisibleCaptcha } from '../components/turnstile.js';
 import { toggleTheme, getTheme } from '../theme.js';
 import { icon } from '../components/icons.js';
 
+// Alur lupa password: minta kode ke email, verifikasi kode, lalu pasang
+// password baru. Sesudah berhasil, pengguna diminta masuk lagi.
+const forgotView = () => {
+  const getCaptchaToken = invisibleCaptcha();
+  const email = el('input', {
+    type: 'email',
+    required: true,
+    placeholder: 'nama@email.com',
+    autocomplete: 'email',
+  });
+  const error = el('p', { class: 'error' });
+  let step = 'email';
+
+  const back = el('p', { class: 'small muted' },
+    'Ingat passwordnya? ',
+    el('a', { href: '#/auth/signin' }, 'Kembali masuk'),
+  );
+
+  const renderStep = () => {
+    if (step === 'email') {
+      const submit = el('button', {
+        class: 'btn btn-primary wide',
+        type: 'submit',
+      }, 'Kirim kode ke email');
+      return el('form', {
+        class: 'stack',
+        onsubmit: async (event) => {
+          event.preventDefault();
+          error.textContent = '';
+          submit.disabled = true;
+          try {
+            const captchaToken = await getCaptchaToken();
+            const result = await requestPasswordReset(
+              email.value.trim(),
+              captchaToken,
+            );
+            if (result.error) throw result.error;
+            toast('Kode dikirim ke email. Cek kotak masuk atau folder spam.');
+            step = 'code';
+            rerender();
+          } catch (err) {
+            error.textContent = err.message || 'Kode gagal dikirim.';
+          } finally {
+            submit.disabled = false;
+          }
+        },
+      },
+      el('p', { class: 'muted small' },
+        'Masukkan email akunmu. Kami kirim kode verifikasi ke email itu.'),
+      el('div', { class: 'field' }, el('label', {}, 'Email'), email),
+      error,
+      submit);
+    }
+
+    const code = el('input', {
+      required: true,
+      inputmode: 'numeric',
+      maxlength: '8',
+      placeholder: '8 digit kode dari email',
+      autocomplete: 'one-time-code',
+    });
+    const newPassword = el('input', {
+      type: 'password',
+      required: true,
+      minlength: '6',
+      placeholder: 'Minimal 6 karakter',
+      autocomplete: 'new-password',
+    });
+    const submit = el('button', {
+      class: 'btn btn-primary wide',
+      type: 'submit',
+    }, 'Simpan password baru');
+    return el('form', {
+      class: 'stack',
+      onsubmit: async (event) => {
+        event.preventDefault();
+        error.textContent = '';
+        submit.disabled = true;
+        try {
+          const check = await verifyRecoveryOtp(email.value.trim(), code.value.trim());
+          if (check.error) throw check.error;
+          const result = await updatePassword(newPassword.value);
+          if (result.error) throw result.error;
+          toast('Password baru tersimpan. Masuk dengan password barumu.');
+          location.hash = '#/auth/signin';
+        } catch (err) {
+          error.textContent = err.message || 'Kode salah atau kedaluwarsa.';
+        } finally {
+          submit.disabled = false;
+        }
+      },
+    },
+    el('p', { class: 'muted small' },
+      `Kode verifikasi sudah dikirim ke ${email.value.trim()}. Kode berlaku 1 jam.`),
+    el('div', { class: 'field' }, el('label', {}, 'Kode dari email'), code),
+    el('div', { class: 'field' },
+      el('label', {}, 'Password baru'),
+      newPassword,
+    ),
+    error,
+    submit,
+    el('p', { class: 'small muted' },
+      'Kode tidak sampai? ',
+      el('a', {
+        href: '#/auth/forgot',
+        onclick: (event) => {
+          event.preventDefault();
+          step = 'email';
+          rerender();
+        },
+      }, 'Kirim ulang kode'),
+    ));
+  };
+
+  const card = el('section', {
+    class: 'panel glass auth-card',
+    style: 'max-width:480px;width:100%',
+  });
+  const rerender = () => {
+    card.replaceChildren(
+      el('div', { class: 'brand' },
+        el('span', { class: 'brand-mark' }, '✓'),
+        'TugasKu',
+      ),
+      el('h1', {}, 'Lupa password'),
+      error,
+      renderStep(),
+      back,
+    );
+  };
+  rerender();
+  return el('main', { class: 'shell center auth-shell' }, card);
+};
+
 export const authView = (mode = 'signin', onDone) => {
+  if (mode === 'forgot') return forgotView();
   const isSignUp = mode === 'signup';
   const getCaptchaToken = invisibleCaptcha();
   const email = el('input', {
@@ -132,6 +270,8 @@ export const authView = (mode = 'signin', onDone) => {
         el('a', {
           href: `#/auth/${isSignUp ? 'signin' : 'signup'}`,
         }, isSignUp ? 'Masuk' : 'Daftar'),
+        !isSignUp && ' · ',
+        !isSignUp && el('a', { href: '#/auth/forgot' }, 'Lupa password'),
       ),
     ),
   );

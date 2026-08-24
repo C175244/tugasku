@@ -3,12 +3,124 @@ import { el } from '../utils/dom.js';
 import { header, profileMenu } from '../components/header.js';
 import { bottomNav } from '../components/navTabs.js';
 import { updateProfile } from '../api/profile.js';
-import { signOut } from '../api/auth.js';
+import {
+  signOut,
+  requestPasswordReset,
+  verifyRecoveryOtp,
+  updatePassword,
+  hasPasswordIdentity,
+} from '../api/auth.js';
 import { deleteMyAccount, deleteClass } from '../api/destructive.js';
 import { toast } from '../components/toast.js';
 import { openDestructiveDialog } from '../components/modal.js';
 import { progressFor } from '../store.js';
 import { roleLabel } from '../utils/roles.js';
+
+// Ganti atau tambah password dengan verifikasi kode yang dikirim ke email
+// akun. Untuk akun yang login lewat Google saja, alur ini sekaligus
+// memasang password pertama kali.
+const passwordSection = (user) => {
+  const hasPassword = hasPasswordIdentity(user);
+  const email = user?.email || '';
+  const intro = hasPassword
+    ? 'Kode verifikasi akan dikirim ke email akunmu sebelum password bisa diganti.'
+    : 'Akunmu masuk lewat Google dan belum punya password. Pasang password supaya bisa masuk dengan email juga. Kode verifikasi dikirim ke email akunmu.';
+  const error = el('p', { class: 'error' });
+  let sent = false;
+
+  const sendCode = el('button', {
+    class: 'btn btn-soft',
+    type: 'button',
+    onclick: async () => {
+      error.textContent = '';
+      sendCode.disabled = true;
+      try {
+        const result = await requestPasswordReset(email);
+        if (result.error) throw result.error;
+        sent = true;
+        toast(`Kode dikirim ke ${email}. Cek kotak masuk atau folder spam.`);
+        rerender();
+      } catch (err) {
+        error.textContent = err.message || 'Kode gagal dikirim.';
+      } finally {
+        sendCode.disabled = false;
+      }
+    },
+  }, 'Kirim kode ke email');
+
+  const code = el('input', {
+    inputmode: 'numeric',
+    maxlength: '8',
+    placeholder: '8 digit kode dari email',
+    autocomplete: 'one-time-code',
+  });
+  const newPassword = el('input', {
+    type: 'password',
+    minlength: '6',
+    placeholder: 'Minimal 6 karakter',
+    autocomplete: 'new-password',
+  });
+  const form = el('form', {
+    class: 'stack',
+    onsubmit: async (event) => {
+      event.preventDefault();
+      error.textContent = '';
+      try {
+        const check = await verifyRecoveryOtp(email, code.value.trim());
+        if (check.error) throw check.error;
+        const result = await updatePassword(newPassword.value);
+        if (result.error) throw result.error;
+        toast(hasPassword
+          ? 'Password berhasil diganti.'
+          : 'Password terpasang. Sekarang kamu bisa masuk dengan email juga.');
+        sent = false;
+        code.value = '';
+        newPassword.value = '';
+        rerender();
+      } catch (err) {
+        error.textContent = err.message || 'Kode salah atau kedaluwarsa.';
+      }
+    },
+  },
+  el('p', { class: 'muted small' },
+    `Kode sudah dikirim ke ${email}. Kode berlaku 1 jam.`),
+  el('div', { class: 'field' }, el('label', {}, 'Kode dari email'), code),
+  el('div', { class: 'field' },
+    el('label', {}, hasPassword ? 'Password baru' : 'Password'),
+    newPassword,
+  ),
+  el('div', { class: 'row' },
+    el('button', {
+      class: 'btn btn-primary',
+      type: 'submit',
+    }, hasPassword ? 'Ganti password' : 'Pasang password'),
+    el('button', {
+      class: 'btn btn-soft',
+      type: 'button',
+      onclick: async () => {
+        const result = await requestPasswordReset(email);
+        if (result.error) toast(result.error.message, 'error');
+        else toast('Kode baru dikirim ulang.');
+      },
+    }, 'Kirim ulang kode'),
+  ));
+
+  const box = el('section', { class: 'panel glass stack' });
+  const rerender = () => {
+    box.replaceChildren(
+      el('div', {},
+        el('p', { class: 'eyebrow' }, 'Akun'),
+        el('h2', {}, hasPassword ? 'Ganti password' : 'Pasang password'),
+      ),
+      el('p', { class: 'muted small' }, intro),
+      sendCode,
+      sent && form,
+      error,
+    );
+  };
+  rerender();
+  return box;
+};
 
 const developerOverview = (classes, onDeleteClass) => el(
   'section',
@@ -186,6 +298,7 @@ export const profileView = async ({
       ),
     ),
     form,
+    passwordSection(user),
     el('section', { class: 'panel glass' },
       el('h2', {}, 'Kelas kamu'),
       el('div', { class: 'stack' },

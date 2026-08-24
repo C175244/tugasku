@@ -11,7 +11,7 @@ import {
   turnstileAvailable,
 } from '../components/turnstile.js';
 import { getSupabase } from '../supabaseClient.js';
-import { getSession, signOut } from '../api/auth.js';
+import { getSession, signOut, signInGoogle } from '../api/auth.js';
 import {
   isDeveloper,
   listDeveloperClasses,
@@ -107,6 +107,19 @@ const loginView = () => {
   captchaBox,
   submit);
 
+  const googleButton = el('button', {
+    class: 'btn btn-soft wide',
+    type: 'button',
+    onclick: async () => {
+      if (turnstileAvailable() && !captchaToken) {
+        toast('Selesaikan dulu verifikasi bukan robot.', 'error');
+        return;
+      }
+      const result = await signInGoogle();
+      if (result?.error) toast(result.error.message, 'error');
+    },
+  }, 'Masuk dengan Google');
+
   if (turnstileAvailable()) {
     mountTurnstile(captchaBox, (token) => { captchaToken = token; })
       .catch((error) => toast(error.message, 'error'));
@@ -121,6 +134,7 @@ const loginView = () => {
     el('p', { class: 'muted' },
       'Halaman ini hanya untuk akun yang terdaftar sebagai developer.'),
     form,
+    googleButton,
   );
 };
 

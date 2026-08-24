@@ -93,6 +93,32 @@ di Google Cloud, gunakan nilai berikut:
 2. Pada **Authorized JavaScript origins**, masukkan:
    `https://c175244.github.io`
    (tanpa `/tugasku`).
+3. Di Supabase, buka **Authentication → URL Configuration** dan tambahkan
+   `https://c175244.github.io/tugasku/developer.html` ke **Redirect URLs**
+   supaya tombol "Masuk dengan Google" di konsol developer bisa dipakai.
+
+## 3b. Ganti atau tambah password (kode verifikasi email)
+
+Aplikasi memakai kode verifikasi 8 digit yang dikirim otomatis ke email saat
+pengguna lupa password (halaman masuk → "Lupa password") atau saat akun
+login Google memasang password pertamanya (menu Profil → "Pasang password").
+
+Mekanisme ini bekerja langsung lewat Supabase Auth tanpa konfigurasi apa pun.
+Agar email yang diterima menampilkan kode dengan jelas (bukan hanya link),
+sesuaikan template recovery di **Authentication → Emails → Reset Password**,
+pastikan template memuat `{{ .Token }}`. Contoh:
+
+```html
+<h2>Kode reset password kamu</h2>
+<p>Masukkan kode ini di aplikasi:</p>
+<p style="font-size:32px;font-weight:bold;letter-spacing:6px">{{ .Token }}</p>
+<p>Kode berlaku 1 jam. Kalau kamu tidak meminta kode ini, abaikan email ini.</p>
+```
+
+Mengedit template email di dashboard memerlukan SMTP kustom (misalnya Resend,
+dikonfigurasi di **Project Settings → Auth → SMTP**) atau upgrade plan.
+Tanpa perubahan itu, email bawaan tetap berisi kode yang sama, hanya
+tampilannya lebih sederhana.
 3. Di Supabase buka **Authentication → Providers → Google**.
 4. Tempel **Client ID** dan **Client Secret** dari Google Cloud, aktifkan
    provider, lalu simpan.
