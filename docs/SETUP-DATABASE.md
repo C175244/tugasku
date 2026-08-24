@@ -181,7 +181,24 @@ File ini menambahkan:
    utama. Bagikan alamatnya hanya ke developer.
 2. Hanya akun yang tercatat di tabel `app_developers` yang bisa masuk.
    Pemeriksaan dilakukan di database, bukan hanya di tampilan.
-3. Di dalamnya developer bisa melihat semua pengguna (nama lengkap, username,
+3. Mendaftarkan akun sebagai developer (lakukan sekali di **SQL Editor**
+   dashboard Supabase, ganti emailnya):
+
+   ```sql
+   insert into public.app_developers (user_id)
+   select id from auth.users where email = 'email-kamu@example.com'
+   on conflict do nothing;
+   ```
+
+   Mencabut status developer:
+
+   ```sql
+   delete from public.app_developers d
+   using auth.users u
+   where d.user_id = u.id and u.email = 'email-kamu@example.com';
+   ```
+
+4. Di dalamnya developer bisa melihat semua pengguna (nama lengkap, username,
    email, peran di setiap kelas), semua kelas, serta melakukan ban, suspensi
    24 jam, cabut blokir, mengeluarkan siapa pun dari kelas mana pun (termasuk
    owner), menghapus kelas, dan menghapus akun.
