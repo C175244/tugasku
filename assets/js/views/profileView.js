@@ -6,16 +6,63 @@ import { updateProfile } from '../api/profile.js';
 import { signOut } from '../api/auth.js';
 import { toast } from '../components/toast.js';
 import { progressFor } from '../store.js';
+import { roleLabel } from '../utils/roles.js';
 
-export const profileView = ({
+const developerOverview = (classes) => el(
+  'section',
+  { class: 'panel glass developer-overview' },
+  el('div', { class: 'section-heading' },
+    el('div', {},
+      el('p', { class: 'eyebrow' }, 'Developer'),
+      el('h2', {}, 'Ringkasan kelas'),
+    ),
+  ),
+  classes.length
+    ? el(
+      'div',
+      { class: 'table-wrap' },
+      el('table', {},
+        el('thead', {},
+          el('tr', {},
+            el('th', {}, 'Kelas'),
+            el('th', {}, 'Kode'),
+            el('th', {}, 'Pemilik'),
+            el('th', {}, 'Anggota'),
+            el('th', {}, 'Tugas'),
+            el('th', {}, 'Lampiran'),
+            el('th', {}, 'Komentar'),
+          ),
+        ),
+        el('tbody', {},
+          ...classes.map((item) => el('tr', {},
+            el('td', {}, item.class_name),
+            el('td', {}, item.room_code),
+            el('td', {}, item.owner_username || 'Pengguna'),
+            el('td', {}, String(item.member_count)),
+            el('td', {}, String(item.task_count)),
+            el('td', {}, String(item.file_count)),
+            el('td', {}, String(item.comment_count)),
+          )),
+        ),
+      ),
+    )
+    : el('p', { class: 'muted' }, 'Belum ada kelas.'),
+);
+
+export const profileView = async ({
   profile,
   classes,
   tasks,
   user,
   onChanged,
+  developerData = null,
 }) => {
+  const overview = developerData || { isDeveloper: false, classes: [] };
   const username = el('input', {
     required: true,
+    minlength: '3',
+    maxlength: '24',
+    pattern: '[a-zA-Z0-9_.]{3,24}',
     value: profile?.username || '',
   });
   const fullName = el('input', {
@@ -32,7 +79,7 @@ export const profileView = ({
       class: 'panel glass stack',
       onsubmit: async (event) => {
         event.preventDefault();
-        const result = await updateProfile({
+        const result = await updateProfile(user.id, {
           username: username.value.trim(),
           full_name: fullName.value.trim() || null,
         });
@@ -67,7 +114,7 @@ export const profileView = ({
     type: 'button',
     onclick: async () => {
       await signOut();
-      location.hash = '#/masuk';
+      location.hash = '#/auth/signin';
     },
   }, 'Keluar dari akun');
 
@@ -102,11 +149,14 @@ export const profileView = ({
           'a',
           { class: 'row space', href: `#/kelas/${item.id}` },
           el('strong', {}, item.name),
-          el('span', { class: 'badge' }, item.role || 'Anggota'),
+          el('span', {
+            class: `badge role-badge role-${item.role || 'member'}`,
+          }, roleLabel(item.role)),
         )),
       ),
     ),
     logout,
+    overview.isDeveloper && developerOverview(overview.classes),
     bottomNav('profil'),
   );
 };

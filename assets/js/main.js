@@ -3,7 +3,7 @@ import { getConfig } from './config.js';
 import { applyTheme } from './theme.js';
 import { getSession, onAuthChange, signOut } from './api/auth.js';
 import { getProfile } from './api/profile.js';
-import { listClasses, listMembers } from './api/classes.js';
+import { listClasses, getClassRole } from './api/classes.js';
 import { listSchedules } from './api/schedules.js';
 import { listTasks, cleanupTasks } from './api/tasks.js';
 import { listProgress } from './api/progress.js';
@@ -22,6 +22,8 @@ import { taskFormView } from './views/taskFormView.js';
 import { taskDetailView } from './views/taskDetailView.js';
 import { profileView } from './views/profileView.js';
 import { startRealtime } from './realtime.js';
+import { isDeveloper, listDeveloperClasses } from './api/developer.js';
+import { isAdminOrHigher } from './utils/roles.js';
 
 applyTheme();
 const app = document.querySelector('#app');
@@ -49,17 +51,15 @@ const errorView = (error) => {
   return main;
 };
 
-const loadClassData = async (classes, userId) => {
+const loadClassData = async (classes) => {
   const results = await Promise.all(classes.map(async (classItem) => {
-    const [scheduleResult, memberResult] = await Promise.all([
+    const [scheduleResult, roleResult] = await Promise.all([
       listSchedules(classItem.id),
-      listMembers(classItem.id),
+      getClassRole(classItem.id),
     ]);
-    const members = memberResult.data || [];
-    const current = members.find((member) => member.user_id === userId);
     return {
       schedules: scheduleResult.data || [],
-      role: current?.role || 'member',
+      role: roleResult.data || 'member',
     };
   }));
   const schedules = results.flatMap((result) => result.schedules);
@@ -124,7 +124,7 @@ const render = async () => {
       return;
     }
     const classes = classesResult.data || [];
-    const classData = await loadClassData(classes, session.user.id);
+    const classData = await loadClassData(classes);
     if (!isCurrent()) return;
     const tasksResult = await Promise.all(
       classes.map((classItem) => listTasks(classItem.id)),
@@ -198,13 +198,13 @@ const render = async () => {
       const classItem = classData.roleClasses.find(
         (item) => item.id === task.class_id,
       );
-      const canEdit = classItem?.role === 'admin'
+      const canEdit = isAdminOrHigher(classItem?.role)
         || task.created_by === session.user.id;
       if (!canEdit) throw new Error('Kamu tidak punya izin mengedit tugas ini.');
       view = taskFormView({
         ...common,
         task,
-        isAdmin: classItem?.role === 'admin',
+        isAdmin: isAdminOrHigher(classItem?.role),
       });
     } else if (current.name === 'tugas' && current.id) {
       const task = tasks.find((item) => item.id === current.id);
@@ -213,7 +213,18 @@ const render = async () => {
     } else if (current.name === 'riwayat') {
       view = historyView(common);
     } else if (current.name === 'profil') {
-      view = profileView(common);
+      const developerResult = await isDeveloper();
+      if (developerResult.error) throw developerResult.error;
+      const developerData = {
+        isDeveloper: Boolean(developerResult.data),
+        classes: [],
+      };
+      if (developerData.isDeveloper) {
+        const overviewResult = await listDeveloperClasses();
+        if (overviewResult.error) throw overviewResult.error;
+        developerData.classes = overviewResult.data || [];
+      }
+      view = await profileView({ ...common, developerData });
     } else {
       view = dashboardView(common);
     }

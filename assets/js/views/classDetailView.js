@@ -3,7 +3,12 @@ import { el } from '../utils/dom.js';
 import { header } from '../components/header.js';
 import { bottomNav } from '../components/navTabs.js';
 import { scheduleView } from './scheduleView.js';
-import { listMembers, setMemberRole, leaveClass } from '../api/classes.js';
+import {
+  listMembers,
+  getClassRole,
+  setMemberRole,
+  leaveClass,
+} from '../api/classes.js';
 import {
   listClassComments,
   addClassComment,
@@ -11,6 +16,11 @@ import {
 } from '../api/comments.js';
 import { toast } from '../components/toast.js';
 import { relativeTime } from '../utils/datetime.js';
+import {
+  isAdminOrHigher,
+  isOwnerOrDeveloper,
+  roleLabel,
+} from '../utils/roles.js';
 
 export const classDetailView = async ({
   classItem,
@@ -23,15 +33,16 @@ export const classDetailView = async ({
     ? { data: previewData.members || [] }
     : await listMembers(classItem.id);
   const members = memberResult.data || [];
-  const current = members.find((member) => member.user_id === user.id);
-  const isAdmin = current?.role === 'admin';
+  const roleResult = previewData
+    ? { data: previewData.role || 'member' }
+    : await getClassRole(classItem.id);
+  const viewerRole = roleResult.data || 'member';
+  const canManage = isAdminOrHigher(viewerRole);
+  const canManageMembers = isOwnerOrDeveloper(viewerRole);
   const commentsResult = previewData
     ? { data: previewData.comments || [] }
     : await listClassComments(classItem.id);
   const comments = commentsResult.data || [];
-  const memberNames = new Map(
-    members.map((member) => [member.user_id, member.username || 'Teman']),
-  );
   const commentList = el('div', { class: 'stack' });
   const renderComments = () => {
     commentList.replaceChildren();
@@ -39,21 +50,32 @@ export const classDetailView = async ({
       const own = comment.user_id === user.id;
       commentList.append(el('article', { class: 'comment glass' },
         el('div', { class: 'row space' },
-          el('strong', {}, `@${memberNames.get(comment.user_id) || 'teman'}`),
+          el('div', { class: 'comment-author' },
+            el('strong', {},
+              `@${comment.username || comment.full_name || 'Pengguna'}`,
+            ),
+            el('span', {
+              class: `badge role-badge role-${comment.author_role || 'member'}`,
+            }, roleLabel(comment.author_role)),
+          ),
           el('span', { class: 'muted small' },
             relativeTime(comment.created_at),
           ),
         ),
         el('p', {}, comment.body),
-        (own || isAdmin) && el('button', {
-          class: 'btn btn-danger-outline small',
-          type: 'button',
-          onclick: async () => {
-            const result = await deleteComment('class_comments', comment.id);
-            if (result.error) toast(result.error.message, 'error');
-            else onChanged?.();
-          },
-        }, 'Hapus'),
+        (own || isOwnerOrDeveloper(viewerRole)) && el(
+          'div',
+          { class: 'comment-actions' },
+          el('button', {
+            class: 'btn btn-danger-outline small',
+            type: 'button',
+            onclick: async () => {
+              const result = await deleteComment('class_comments', comment.id);
+              if (result.error) toast(result.error.message, 'error');
+              else onChanged?.();
+            },
+          }, 'Hapus'),
+        ),
       ));
     });
   };
@@ -86,12 +108,18 @@ export const classDetailView = async ({
   const memberList = el('div', { class: 'stack' },
     ...members.map((member) => el('div', { class: 'row space panel glass' },
       el('div', {},
-        el('strong', {}, `@${member.username || 'teman'}`),
+        el('strong', {},
+          `@${member.username || member.full_name || 'Pengguna'}`,
+        ),
         el('span', {
-          class: `badge ${member.role === 'admin' ? 'purple' : ''}`,
-        }, member.role === 'admin' ? 'Admin' : 'Anggota'),
+          class: `badge role-badge role-${member.role || 'member'}`,
+        }, roleLabel(member.role)),
       ),
-      isAdmin && member.user_id !== user.id && el('button', {
+      canManageMembers
+      && member.user_id !== user.id
+      && member.role !== 'owner'
+      && member.role !== 'developer'
+      && el('button', {
         class: 'btn btn-soft',
         type: 'button',
         onclick: async () => {
@@ -105,6 +133,22 @@ export const classDetailView = async ({
           else onChanged?.();
         },
       }, member.role === 'admin' ? 'Turunkan' : 'Jadikan admin'),
+      viewerRole === 'developer'
+      && member.user_id !== user.id
+      && member.role !== 'owner'
+      && el('button', {
+        class: 'btn btn-soft',
+        type: 'button',
+        onclick: async () => {
+          const result = await setMemberRole(
+            classItem.id,
+            member.user_id,
+            'owner',
+          );
+          if (result.error) toast(result.error.message, 'error');
+          else onChanged?.();
+        },
+      }, 'Jadikan owner'),
     )),
   );
 
@@ -155,7 +199,7 @@ export const classDetailView = async ({
       scheduleView({
         classId: classItem.id,
         schedules,
-        isAdmin,
+        isAdmin: canManage,
         onChanged,
       }),
     ),
@@ -165,7 +209,11 @@ export const classDetailView = async ({
     ),
     el('section', { class: 'panel glass' },
       el('h2', {}, 'Obrolan kelas'),
-      commentForm,
+      canManage
+        ? commentForm
+        : el('p', { class: 'member-notice muted' },
+          'Hanya admin yang bisa menulis komentar.',
+        ),
       commentList,
     ),
     bottomNav('kelas'),

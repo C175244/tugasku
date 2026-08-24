@@ -78,7 +78,7 @@ export const profileMenu = (profile) => el(
     onclick: async () => {
       await signOut();
       toast('Kamu sudah keluar.');
-      location.hash = '#/masuk';
+      location.hash = '#/auth/signin';
     },
   }, 'Keluar'),
 );

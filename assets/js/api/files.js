@@ -2,11 +2,20 @@
 import { getSupabase } from '../supabaseClient.js';
 import { sanitizeFilename } from '../utils/format.js';
 
-export const listFiles = (taskId) => getSupabase()
-  .from('task_files')
-  .select('*')
-  .eq('task_id', taskId)
-  .order('created_at');
+const mapFileError = (error) => {
+  if (error?.code === '42501') {
+    return {
+      ...error,
+      message: 'Kamu tidak punya izin untuk mengubah lampiran ini.',
+    };
+  }
+  return error;
+};
+
+export const listFiles = (taskId) => getSupabase().rpc(
+  'task_file_list',
+  { p_task_id: taskId },
+);
 
 export const uploadFile = async (file, classId, taskId, userId) => {
   const supabase = getSupabase();
@@ -21,7 +30,7 @@ export const uploadFile = async (file, classId, taskId, userId) => {
       upsert: false,
       contentType: file.type || undefined,
     });
-  if (uploaded.error) throw uploaded.error;
+  if (uploaded.error) throw mapFileError(uploaded.error);
 
   const { data, error } = await supabase
     .from('task_files')
@@ -38,15 +47,23 @@ export const uploadFile = async (file, classId, taskId, userId) => {
     .single();
   if (error) {
     await supabase.storage.from('task-files').remove([path]);
-    throw error;
+    throw mapFileError(error);
   }
   return data;
 };
 
-export const signedUrl = (path, expires = 3600) => getSupabase()
+export const signedUrl = (
+  path,
+  expires = 3600,
+  download = null,
+) => getSupabase()
   .storage
   .from('task-files')
-  .createSignedUrl(path, expires);
+  .createSignedUrl(
+    path,
+    expires,
+    download ? { download } : undefined,
+  );
 
 export const deleteFile = async (file) => {
   const supabase = getSupabase();
@@ -56,6 +73,15 @@ export const deleteFile = async (file) => {
     .eq('id', file.id);
   if (!result.error) {
     await supabase.storage.from('task-files').remove([file.storage_path]);
+  }
+  if (result.error?.code === '42501') {
+    return {
+      ...result,
+      error: {
+        ...result.error,
+        message: 'Kamu tidak punya izin untuk mengubah lampiran ini.',
+      },
+    };
   }
   return result;
 };

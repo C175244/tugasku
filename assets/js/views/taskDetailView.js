@@ -6,16 +6,26 @@ import { countdown } from '../components/countdown.js';
 import { formatDeadline, DAY_NAMES, relativeTime } from '../utils/datetime.js';
 import { upsertProgress } from '../api/progress.js';
 import { deleteTask } from '../api/tasks.js';
-import { listFiles, signedUrl, uploadFile, deleteFile } from '../api/files.js';
+import {
+  listFiles,
+  signedUrl,
+  uploadFile,
+  deleteFile,
+} from '../api/files.js';
 import {
   listTaskComments,
   addTaskComment,
   deleteComment,
 } from '../api/comments.js';
-import { listMembers } from '../api/classes.js';
+import { getClassRole } from '../api/classes.js';
 import { toast } from '../components/toast.js';
 import { progressFor } from '../store.js';
-import { titleCase } from '../utils/format.js';
+import { formatBytes, titleCase } from '../utils/format.js';
+import {
+  isAdminOrHigher,
+  isOwnerOrDeveloper,
+  roleLabel,
+} from '../utils/roles.js';
 
 export const taskDetailView = async ({
   task,
@@ -25,14 +35,12 @@ export const taskDetailView = async ({
   previewData = null,
 }) => {
   const classItem = classes.find((item) => item.id === task.class_id);
-  const membersResult = previewData
-    ? { data: previewData.members || [] }
-    : await listMembers(task.class_id);
-  const members = membersResult.data || [];
-  const isAdmin = members.some(
-    (member) => member.user_id === user.id && member.role === 'admin',
-  );
-  const canEdit = isAdmin || task.created_by === user.id;
+  const roleResult = previewData
+    ? { data: previewData.role || 'member' }
+    : await getClassRole(task.class_id);
+  const viewerRole = roleResult.data || 'member';
+  const canManage = isAdminOrHigher(viewerRole);
+  const canEdit = canManage || task.created_by === user.id;
   const filesResult = previewData
     ? { data: previewData.files || [] }
     : await listFiles(task.id);
@@ -52,22 +60,75 @@ export const taskDetailView = async ({
   const renderFiles = async () => {
     fileList.replaceChildren();
     for (const file of files) {
-      const link = await signedUrl(file.storage_path);
-      fileList.append(el('div', { class: 'row space panel glass' },
-        el('a', {
-          href: link.data?.signedUrl || '#',
-          target: '_blank',
-          rel: 'noreferrer',
-        }, file.file_name),
-        file.uploader_id === user.id && el('button', {
-          class: 'btn btn-danger-outline',
-          type: 'button',
-          onclick: async () => {
-            const result = await deleteFile(file);
-            if (result.error) toast(result.error.message, 'error');
-            else onChanged?.();
-          },
-        }, 'Hapus'),
+      const [openLink, downloadLink] = previewData
+        ? [
+          { data: { signedUrl: file.preview_url } },
+          { data: { signedUrl: file.preview_url } },
+        ]
+        : await Promise.all([
+          signedUrl(file.storage_path),
+          signedUrl(file.storage_path, 3600, file.file_name),
+        ]);
+      const signedOpenUrl = openLink.data?.signedUrl || '#';
+      const isMedia = /^(image|video)\//.test(file.mime_type || '');
+      const mediaPreview = isMedia
+      && (file.mime_type || '').startsWith('image/')
+        ? el('img', {
+          class: 'file-preview',
+          src: signedOpenUrl,
+          alt: file.file_name,
+          loading: 'lazy',
+        })
+        : isMedia && el('video', {
+          class: 'file-preview',
+          src: signedOpenUrl,
+          controls: true,
+          preload: 'metadata',
+        });
+      const fileExtension = file.file_name?.includes('.')
+        ? file.file_name.split('.').pop().slice(0, 6).toUpperCase()
+        : 'FILE';
+      fileList.append(el('article', { class: 'file-item' },
+        mediaPreview || el(
+          'span',
+          { class: 'file-type-marker', 'aria-label': `Tipe file ${fileExtension}` },
+          fileExtension,
+        ),
+        el('div', { class: 'file-meta' },
+          el('strong', {}, file.file_name),
+          el('span', { class: 'muted small' },
+            `Diunggah oleh ${file.username || file.full_name || 'Pengguna'}`,
+          ),
+          el('span', { class: 'muted small' },
+            file.mime_type || 'Lampiran',
+          ),
+          el('span', { class: 'muted small' },
+            formatBytes(file.size_bytes),
+          ),
+        ),
+        el('div', { class: 'row file-actions' },
+          el('a', {
+            class: 'btn btn-soft small',
+            href: signedOpenUrl,
+            target: '_blank',
+            rel: 'noreferrer',
+          }, 'Buka'),
+          el('a', {
+            class: 'btn btn-soft small',
+            href: downloadLink.data?.signedUrl || '#',
+            download: file.file_name,
+          }, 'Unduh'),
+          (file.uploader_id === user.id || isOwnerOrDeveloper(viewerRole))
+          && el('button', {
+            class: 'btn btn-danger-outline',
+            type: 'button',
+            onclick: async () => {
+              const result = await deleteFile(file);
+              if (result.error) toast(result.error.message, 'error');
+              else onChanged?.();
+            },
+          }, 'Hapus'),
+        ),
       ));
     }
   };
@@ -76,21 +137,31 @@ export const taskDetailView = async ({
     comments.forEach((comment) => commentList.append(
       el('article', { class: 'comment glass' },
         el('div', { class: 'row space' },
-          el('strong', {}, '@Teman'),
+          el('div', { class: 'comment-author' },
+            el('strong', {},
+              `@${comment.username || comment.full_name || 'Pengguna'}`,
+            ),
+            el('span', {
+              class: `badge role-badge role-${comment.author_role || 'member'}`,
+            }, roleLabel(comment.author_role)),
+          ),
           el('span', { class: 'muted small' },
             relativeTime(comment.created_at),
           ),
         ),
         el('p', {}, comment.body),
-        comment.user_id === user.id && el('button', {
-          class: 'btn btn-danger-outline small',
-          type: 'button',
-          onclick: async () => {
-            const result = await deleteComment('task_comments', comment.id);
-            if (result.error) toast(result.error.message, 'error');
-            else onChanged?.();
-          },
-        }, 'Hapus'),
+        (comment.user_id === user.id || isOwnerOrDeveloper(viewerRole))
+        && el('div', { class: 'comment-actions' },
+          el('button', {
+            class: 'btn btn-danger-outline small',
+            type: 'button',
+            onclick: async () => {
+              const result = await deleteComment('task_comments', comment.id);
+              if (result.error) toast(result.error.message, 'error');
+              else onChanged?.();
+            },
+          }, 'Hapus'),
+        ),
       ),
     ));
   };
@@ -208,13 +279,17 @@ export const taskDetailView = async ({
     ),
     el('section', { class: 'panel glass' },
       el('h2', {}, 'Lampiran'),
-      filePicker,
-      input,
+      canManage && filePicker,
+      canManage && input,
       fileList,
     ),
     el('section', { class: 'panel glass' },
       el('h2', {}, 'Komentar'),
-      commentForm,
+      canManage
+        ? commentForm
+        : el('p', { class: 'member-notice muted' },
+          'Hanya admin yang bisa menulis komentar.',
+        ),
       commentList,
     ),
     bottomNav('dashboard'),

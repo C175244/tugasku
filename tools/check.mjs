@@ -47,7 +47,13 @@ if (orphaned.length) {
   );
 }
 
-const schema = await readFile(resolve(root, 'supabase/schema.sql'), 'utf8');
+const sqlDirectory = resolve(root, 'supabase');
+const sqlFiles = (await readdir(sqlDirectory, { withFileTypes: true }))
+  .filter((entry) => entry.isFile() && entry.name.endsWith('.sql'))
+  .map((entry) => resolve(sqlDirectory, entry.name));
+const schema = (await Promise.all(
+  sqlFiles.map((file) => readFile(file, 'utf8')),
+)).join('\n');
 const schemaTables = new Set(
   [...schema.matchAll(/create table if not exists public\.([a-z_]+)/gi)]
     .map((match) => match[1]),

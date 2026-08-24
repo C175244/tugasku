@@ -11,6 +11,27 @@
   --mute: var(--on-dark-mute);
 }
 
+:root[data-theme='dark'] .role-admin,
+:root:not([data-theme='light']) .role-admin {
+  color: var(--primary);
+  border-color: var(--primary);
+  background: var(--surface-elevated);
+}
+
+:root[data-theme='dark'] .role-owner,
+:root:not([data-theme='light']) .role-owner {
+  color: var(--warning-bright);
+  border-color: var(--warning-bright);
+  background: var(--surface-elevated);
+}
+
+:root[data-theme='dark'] .role-developer,
+:root:not([data-theme='light']) .role-developer {
+  color: var(--accent-purple-pale);
+  border-color: var(--accent-purple-pale);
+  background: var(--surface-elevated);
+}
+
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;

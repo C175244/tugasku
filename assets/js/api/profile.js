@@ -10,8 +10,27 @@ export const getProfile = async () => {
   return data;
 };
 
-export const updateProfile = (values) => getSupabase()
-  .from('profiles')
-  .update(values)
-  .select()
-  .single();
+export const updateProfile = async (userId, values) => {
+  const result = await getSupabase()
+    .from('profiles')
+    .update(values)
+    .eq('id', userId)
+    .select()
+    .maybeSingle();
+  if (
+    result.error?.code === '23505'
+    && (
+      result.error.constraint === 'profiles_username_key'
+      || result.error.message?.includes('profiles_username_key')
+    )
+  ) {
+    return {
+      ...result,
+      error: {
+        ...result.error,
+        message: 'Username sudah dipakai, coba yang lain.',
+      },
+    };
+  }
+  return result;
+};

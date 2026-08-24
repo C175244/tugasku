@@ -18,6 +18,10 @@ export const listMembers = (classId) => getSupabase().rpc('class_member_list', {
   p_class_id: classId,
 });
 
+export const getClassRole = (classId) => getSupabase().rpc('my_class_role', {
+  p_class_id: classId,
+});
+
 export const setMemberRole = (classId, userId, role) => getSupabase().rpc(
   'set_member_role',
   { p_class_id: classId, p_user_id: userId, p_role: role },

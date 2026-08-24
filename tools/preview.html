@@ -153,6 +153,50 @@
       { user_id: '66666666-6666-4666-8666-666666666666', username: 'sinta', role: 'member' },
     ];
     const user = { id: userId, email: 'bayu@example.com' };
+    const previewFiles = [
+      {
+        id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        task_id: tasks[1].id,
+        class_id: classId,
+        uploader_id: '66666666-6666-4666-8666-666666666666',
+        storage_path: 'preview/foto-praktikum.svg',
+        file_name: 'foto-praktikum.svg',
+        mime_type: 'image/svg+xml',
+        size_bytes: 18432,
+        created_at: new Date(now - 7200000).toISOString(),
+        username: 'sinta',
+        full_name: 'Sinta Maharani',
+        preview_url: '../favicon.svg',
+      },
+      {
+        id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+        task_id: tasks[1].id,
+        class_id: classId,
+        uploader_id: '66666666-6666-4666-8666-666666666666',
+        storage_path: 'preview/rangkuman.pdf',
+        file_name: 'rangkuman.pdf',
+        mime_type: 'application/pdf',
+        size_bytes: 245760,
+        created_at: new Date(now - 5400000).toISOString(),
+        username: 'sinta',
+        full_name: 'Sinta Maharani',
+        preview_url: '../README.md',
+      },
+      {
+        id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+        task_id: tasks[1].id,
+        class_id: classId,
+        uploader_id: '66666666-6666-4666-8666-666666666666',
+        storage_path: 'preview/data.bin',
+        file_name: 'data-praktikum.bin',
+        mime_type: 'application/octet-stream',
+        size_bytes: 1048576,
+        created_at: new Date(now - 3600000).toISOString(),
+        username: 'sinta',
+        full_name: 'Sinta Maharani',
+        preview_url: '../assets/css/variables.css',
+      },
+    ];
     setProgress([
       { task_id: tasks[0].id, status: 'done' },
       { task_id: tasks[1].id, status: 'pending' },
@@ -182,6 +226,7 @@
     }));
     const query = new URLSearchParams(location.search);
     picker.value = query.get('view') || 'dashboard';
+    const previewRole = query.get('role') === 'member' ? 'member' : 'owner';
     const requestedTheme = query.get('theme');
     if (requestedTheme === 'light' || requestedTheme === 'dark') {
       applyTheme(requestedTheme);
@@ -275,7 +320,18 @@
         view = await taskDetailView({
           ...common,
           task: tasks[1],
-          previewData: { members, files: [], comments: [] },
+          previewData: {
+            members,
+            files: previewFiles,
+            comments: [{
+              user_id: members[1].user_id,
+              username: 'sinta',
+              author_role: 'member',
+              body: 'Aku sudah unggah bahan praktikum dan rangkumannya.',
+              created_at: new Date(now - 1800000).toISOString(),
+            }],
+            role: previewRole,
+          },
         });
       }
       if (selected === 'class') {
@@ -285,11 +341,23 @@
           schedules,
           previewData: {
             members,
-            comments: [{
-              user_id: members[1].user_id,
-              body: 'Besok jangan lupa bawa buku paket, ya.',
-              created_at: new Date(now - 3600000).toISOString(),
-            }],
+            role: previewRole,
+            comments: [
+              {
+                user_id: members[1].user_id,
+                username: 'sinta',
+                author_role: 'member',
+                body: 'Besok jangan lupa bawa buku paket, ya.',
+                created_at: new Date(now - 3600000).toISOString(),
+              },
+              {
+                user_id: userId,
+                username: 'bayu',
+                author_role: 'owner',
+                body: 'Siap, materi sudah aku sematkan di lampiran.',
+                created_at: new Date(now - 900000).toISOString(),
+              },
+            ],
           },
         });
       }
@@ -306,7 +374,12 @@
         );
       }
       if (selected === 'history') view = historyView(common);
-      if (selected === 'profile') view = profileView(common);
+      if (selected === 'profile') {
+        view = await profileView({
+          ...common,
+          developerData: { isDeveloper: false, classes: [] },
+        });
+      }
       if (selected === 'auth') view = authView('signin', () => {});
       if (selected === 'setup') view = setupView(() => {});
       if (selected === 'form') view = taskFormView(common);

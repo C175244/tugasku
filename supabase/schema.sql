@@ -1,6 +1,11 @@
 -- ============================================================================
 -- TugasKu - Skema Database Supabase (jalankan SEKALI di SQL Editor Supabase)
 -- Aman di-jalankan ulang (idempotent): pakai IF NOT EXISTS / DROP POLICY IF EXISTS
+--
+-- PENTING: setelah file ini, jalankan juga
+--   supabase/upgrade-01-role-komentar-lampiran.sql
+-- yang menambahkan role bertingkat (member < admin < owner < developer),
+-- komentar & lampiran khusus admin, dan pembersihan file otomatis.
 -- ============================================================================
 
 create extension if not exists "pgcrypto";
@@ -585,3 +590,7 @@ grant execute on function public.class_member_list(uuid)            to authentic
 grant execute on function public.cleanup_expired_tasks(int)         to authenticated;
 grant execute on function public.is_class_member(uuid)              to authenticated;
 grant execute on function public.is_class_admin(uuid)               to authenticated;
+
+-- ============================================================================
+-- LANGKAH TERAKHIR: jalankan supabase/upgrade-01-role-komentar-lampiran.sql
+-- ============================================================================
