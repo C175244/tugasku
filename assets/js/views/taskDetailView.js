@@ -18,7 +18,7 @@ import {
   deleteComment,
 } from '../api/comments.js';
 import { getClassRole } from '../api/classes.js';
-import { commentGuard } from '../components/commentGuard.js';
+import { commentField, commentGuard } from '../components/commentGuard.js';
 import { toast } from '../components/toast.js';
 import { progressFor } from '../store.js';
 import { formatBytes, titleCase } from '../utils/format.js';
@@ -208,10 +208,8 @@ export const taskDetailView = async ({
     { class: 'btn btn-soft', for: fileInputId },
     'Pilih lampiran',
   );
-  const commentInput = el('textarea', {
-    rows: '2',
-    placeholder: 'Tulis komentar...',
-  });
+  const commentField_ = commentField('Tulis komentar...');
+  const commentInput = commentField_.input;
   const guard = commentGuard();
   const commentForm = el('form', {
     class: 'stack',
@@ -239,6 +237,7 @@ export const taskDetailView = async ({
       type: 'submit',
     }, 'Kirim'),
   ),
+  commentField_.counter,
   guard.node);
 
   const actions = el('div', { class: 'row' },

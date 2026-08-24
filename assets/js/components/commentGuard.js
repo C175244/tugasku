@@ -12,6 +12,27 @@ import {
   trackCommentSent,
 } from '../utils/antiSpam.js';
 
+// Panjang maksimal satu komentar (sesuai constraint database). Komentar yang
+// lebih panjang harus dikirim pengguna dalam beberapa komentar terpisah.
+export const COMMENT_MAX_LENGTH = 120;
+
+// Textarea komentar dengan batas karakter dan penghitung sisa.
+export const commentField = (placeholder) => {
+  const input = el('textarea', {
+    rows: '2',
+    placeholder,
+    maxlength: String(COMMENT_MAX_LENGTH),
+  });
+  const counter = el('p', { class: 'muted small' }, `${COMMENT_MAX_LENGTH} karakter tersisa`);
+  input.addEventListener('input', () => {
+    const left = COMMENT_MAX_LENGTH - input.value.length;
+    counter.textContent = left > 0
+      ? `${left} karakter tersisa`
+      : 'Batas 120 karakter tercapai — kirim sisanya di komentar berikutnya';
+  });
+  return { input, counter };
+};
+
 export const commentGuard = () => {
   let token = null;
   let widgetId = null;

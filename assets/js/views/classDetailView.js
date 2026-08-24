@@ -21,7 +21,7 @@ import {
 } from '../api/comments.js';
 import { toast } from '../components/toast.js';
 import { openDestructiveDialog, openModal } from '../components/modal.js';
-import { commentGuard } from '../components/commentGuard.js';
+import { commentField, commentGuard } from '../components/commentGuard.js';
 import { relativeTime } from '../utils/datetime.js';
 import {
   isAdminOrHigher,
@@ -93,10 +93,8 @@ export const classDetailView = async ({
   };
   renderComments();
 
-  const commentInput = el('textarea', {
-    rows: '2',
-    placeholder: 'Tulis pesan untuk kelas...',
-  });
+  const commentField_ = commentField('Tulis pesan untuk kelas...');
+  const commentInput = commentField_.input;
   const guard = commentGuard();
   const commentForm = el('form', {
     class: 'stack',
@@ -123,6 +121,7 @@ export const classDetailView = async ({
       type: 'submit',
     }, 'Kirim'),
   ),
+  commentField_.counter,
   guard.node);
 
   const openKickDialog = (member) => {

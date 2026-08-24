@@ -209,3 +209,12 @@ sungguhan, ganti dengan kunci asli:
    tidak melihat apa pun.
 5. Tanpa site key (kedua variabel dikosongkan), widget tidak ditampilkan dan
    rate limit database tetap menjadi pagar.
+
+## 12. Batas panjang komentar (upgrade-04)
+
+Setiap komentar maksimal 120 karakter. Komentar yang lebih panjang harus
+dikirim pengguna dalam beberapa komentar terpisah. Batas ditegakkan di
+database (`supabase/upgrade-04-comment-length.sql`):
+
+1. Buka file tersebut di GitHub, salin seluruh isinya.
+2. Jalankan di **SQL Editor** dashboard Supabase.
