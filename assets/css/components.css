@@ -710,6 +710,16 @@
   overflow-x: auto;
 }
 
+.captcha-box {
+  display: grid;
+  gap: var(--space-sm);
+  justify-items: start;
+}
+
+.captcha-box[hidden] {
+  display: none;
+}
+
 .table-wrap table {
   width: 100%;
   min-width: 720px;

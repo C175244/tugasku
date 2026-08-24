@@ -19,7 +19,11 @@ const walk = async (directory) => {
 await walk(jsRoot);
 const texts = new Map();
 const missing = [];
-const imported = new Set([resolve(jsRoot, 'main.js')]);
+// Titik masuk: aplikasi utama dan konsol developer (developer.html).
+const imported = new Set([
+  resolve(jsRoot, 'main.js'),
+  resolve(jsRoot, 'dev/devMain.js'),
+]);
 
 for (const file of files) {
   const text = await readFile(file, 'utf8');

@@ -11,9 +11,15 @@ import { STORAGE_KEYS } from './utils/storageKeys.js';
 export const SUPABASE_URL = 'https://zvzghjvavnmriqljzizp.supabase.co';
 export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp2emdoanZhdm5tcmlxbGp6aXpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0ODc5MzQsImV4cCI6MjEwMzA2MzkzNH0.W3teRZF9zcDM1ThrJDMLOmvsh-YotcXUyLxfg6TVY-I';
 
+// Site key Cloudflare Turnstile (captcha). Buat gratis di
+// https://dash.cloudflare.com/?to=/:account/turnstile lalu tempel di sini.
+// Kosongkan untuk mematikan verifikasi bukan robot (mode pengembangan).
+export const TURNSTILE_SITE_KEY = '';
+
 export const getConfig = () => ({
   url: localStorage.getItem(STORAGE_KEYS.url) || SUPABASE_URL,
   anonKey: localStorage.getItem(STORAGE_KEYS.anonKey) || SUPABASE_ANON_KEY,
+  turnstileSiteKey: TURNSTILE_SITE_KEY,
 });
 
 export const saveConfig = (url, anonKey) => {

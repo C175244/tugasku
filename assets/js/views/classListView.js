@@ -4,9 +4,14 @@ import { header } from '../components/header.js';
 import { bottomNav } from '../components/navTabs.js';
 import { openModal } from '../components/modal.js';
 import { toast } from '../components/toast.js';
-import { createClass, joinClass } from '../api/classes.js';
+import { createClass, joinClass, myKickNotices } from '../api/classes.js';
+import { relativeTime } from '../utils/datetime.js';
 
-export const classListView = ({ classes, onChanged }) => {
+export const classListView = async ({ classes, onChanged, previewData = null }) => {
+  const noticesResult = previewData
+    ? { data: previewData.kickNotices || [] }
+    : await myKickNotices();
+  const kickNotices = noticesResult.data || [];
   const cards = classes.map((item) => el(
       'a',
       {
@@ -62,13 +67,21 @@ export const classListView = ({ classes, onChanged }) => {
       placeholder: 'ABC123',
       style: 'text-transform:uppercase',
     });
+    const rejoinCode = el('input', {
+      maxlength: '8',
+      placeholder: 'Kode join ulang (jika pernah dikeluarkan)',
+      style: 'text-transform:uppercase',
+    });
     const form = el(
       'form',
       {
         class: 'stack',
         onsubmit: async (event) => {
           event.preventDefault();
-          const { error } = await joinClass(code.value);
+          const { error } = await joinClass(
+            code.value,
+            rejoinCode.value.trim() || null,
+          );
           if (error) {
             toast(error.message, 'error');
             return;
@@ -82,6 +95,12 @@ export const classListView = ({ classes, onChanged }) => {
         el('label', {}, 'Kode room 6 karakter'),
         code,
       ),
+      el('div', { class: 'field' },
+        el('label', {}, 'Kode join ulang (opsional)'),
+        rejoinCode,
+        el('p', { class: 'muted small' },
+          'Hanya diisi bila kamu pernah dikeluarkan dari kelas ini.'),
+      ),
       el('button', {
         class: 'btn btn-primary',
         type: 'submit',
@@ -89,6 +108,25 @@ export const classListView = ({ classes, onChanged }) => {
     );
     openModal('Gabung kelas', form);
   };
+
+  const kickNoticePanel = kickNotices.length > 0 && el(
+    'section',
+    { class: 'panel glass' },
+    el('h2', {}, 'Riwayat dikeluarkan'),
+    el('div', { class: 'stack' },
+      ...kickNotices.map((notice) => el('div', { class: 'panel glass' },
+        el('div', { class: 'row space' },
+          el('strong', {}, notice.class_name || 'Kelas terhapus'),
+          el('span', { class: 'muted small' }, relativeTime(notice.created_at)),
+        ),
+        el('p', { class: 'muted small' },
+          `Alasan: ${notice.reason || 'Tidak ada alasan yang diberikan.'}`),
+        el('p', { class: 'muted small' },
+          `Dikeluarkan oleh @${notice.kicked_by_username || 'pengurus'}. `
+          + 'Minta kode join ulang ke admin/owner kelas untuk masuk kembali.'),
+      )),
+    ),
+  );
 
   return el(
     'main',
@@ -121,6 +159,7 @@ export const classListView = ({ classes, onChanged }) => {
           'Belum ada kelas. Buat atau gabung sekarang, yuk!',
         )]),
     ),
+    kickNoticePanel,
     bottomNav('kelas'),
   );
 };

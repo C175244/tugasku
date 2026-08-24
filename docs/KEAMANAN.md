@@ -74,3 +74,22 @@ berada di browser.
 3. Gunakan password unik untuk email dan database.
 4. Jangan mengirim key lewat chat kelas atau memasukkannya ke screenshot.
 5. Saat selesai memakai HP umum, keluar dari GitHub dan Supabase.
+
+## 6. Kick, blokir, dan konsol developer
+
+1. Kick kelas dicatat di tabel `class_bans` bersama alasannya. Pengguna yang
+   dikeluarkan hanya bisa membaca catatan miliknya sendiri lewat RLS.
+2. Kode join ulang disimpan di `class_rejoin_codes` tanpa policy publik;
+   hanya fungsi RPC yang boleh membuat, membaca, dan menandainya terpakai.
+   Kode hanya dibuat saat admin/owner/developer menekan tombol, berlaku 7
+   hari, dan hangus setelah dipakai sekali.
+3. Konsol developer (`developer.html`) tidak mengandalkan penyembunyian
+   tampilan: semua datanya keluar dari fungsi `dev_*` yang memeriksa
+   keanggotaan `app_developers` di database. Akun biasa mendapat hasil kosong.
+4. Ban global ditegakkan di database lewat `assert_not_banned` pada pembuatan
+   kelas, gabung kelas, dan trigger komentar, sehingga tetap berlaku walau
+   pengguna mengakali tampilan.
+5. Verifikasi anti-bot (Turnstile) wajib di halaman konsol developer dan hanya
+   muncul di aplikasi utama saat aktivitas komentar tidak wajar. Pagar
+   terakhir tetap di database: trigger membatasi 20 komentar per menit per
+   akun, jadi spam terhenti walau captcha belum dikonfigurasi.

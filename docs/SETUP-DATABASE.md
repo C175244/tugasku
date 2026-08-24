@@ -156,3 +156,47 @@ project sendiri, ganti alamat callback dengan project ref milikmu.
 6. **Blank page setelah deploy:** cek nama file dan folder, termasuk huruf
    besar-kecil. Pastikan `index.html` ada di root, `.nojekyll` ikut ter-upload,
    dan buka Console jika browser menampilkannya.
+
+## 9. Upgrade 03: kick, kode join ulang, ban, dan konsol developer
+
+Jalankan sekali di **SQL Editor** setelah `schema.sql`, `upgrade-01`, dan
+`upgrade-02`:
+
+1. Buka `supabase/upgrade-03-kick-ban-developer.sql` di GitHub.
+2. Salin seluruh isinya, tempel ke SQL Editor, lalu tekan **Run**.
+
+File ini menambahkan:
+
+1. Kick anggota dengan alasan opsional oleh admin/owner/developer.
+2. Blokir kelas: pengguna yang dikeluarkan tidak bisa masuk lagi ke kelas yang
+   sama sampai admin/owner/developer menekan tombol **Buat kode join ulang**
+   dan memberikan kode sekali pakai itu ke pengguna.
+3. Ban/suspensi global oleh developer, berikut daftar semua pengguna
+   (nama lengkap, username, email, peran kelas) untuk konsol developer.
+4. Rate limit komentar di database (maksimal 20 komentar per menit per akun).
+
+## 10. Konsol developer (halaman terpisah)
+
+1. Konsol ada di `/developer.html` dan sengaja tidak ditautkan dari aplikasi
+   utama. Bagikan alamatnya hanya ke developer.
+2. Hanya akun yang tercatat di tabel `app_developers` yang bisa masuk.
+   Pemeriksaan dilakukan di database, bukan hanya di tampilan.
+3. Di dalamnya developer bisa melihat semua pengguna (nama lengkap, username,
+   email, peran di setiap kelas), semua kelas, serta melakukan ban, suspensi
+   24 jam, cabut blokir, mengeluarkan siapa pun dari kelas mana pun (termasuk
+   owner), menghapus kelas, dan menghapus akun.
+
+## 11. Verifikasi anti-bot (Cloudflare Turnstile)
+
+1. Buat site key gratis di
+   [dashboard Cloudflare Turnstile](https://dash.cloudflare.com/?to=/:account/turnstile),
+   pilih mode **Managed**, dan daftarkan domain GitHub Pages aplikasi.
+2. Tempel site key ke `TURNSTILE_SITE_KEY` di `assets/js/config.js`.
+3. Buka **Authentication → Sign In / Up → Attack Protection** di dashboard
+   Supabase, aktifkan **Enable Captcha protection**, pilih Turnstile, lalu
+   tempel **secret key**-nya di sana. Secret key tidak boleh masuk repo.
+4. Setelah aktif: halaman konsol developer selalu meminta verifikasi saat
+   login dan sebelum aksi sensitif pertama; di aplikasi utama widget hanya
+   muncul saat aktivitas komentar terdeteksi tidak wajar.
+5. Tanpa site key, widget tidak ditampilkan dan rate limit database tetap
+   menjadi pagar.

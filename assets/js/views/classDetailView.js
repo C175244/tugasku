@@ -8,6 +8,10 @@ import {
   getClassRole,
   setMemberRole,
   leaveClass,
+  kickMember,
+  listBans,
+  createRejoinCode,
+  liftBan,
 } from '../api/classes.js';
 import { deleteClass } from '../api/destructive.js';
 import {
@@ -16,12 +20,14 @@ import {
   deleteComment,
 } from '../api/comments.js';
 import { toast } from '../components/toast.js';
-import { openDestructiveDialog } from '../components/modal.js';
+import { openDestructiveDialog, openModal } from '../components/modal.js';
+import { commentGuard } from '../components/commentGuard.js';
 import { relativeTime } from '../utils/datetime.js';
 import {
   isAdminOrHigher,
   isOwnerOrDeveloper,
   roleLabel,
+  roleRank,
 } from '../utils/roles.js';
 
 export const classDetailView = async ({
@@ -45,6 +51,10 @@ export const classDetailView = async ({
     ? { data: previewData.comments || [] }
     : await listClassComments(classItem.id);
   const comments = commentsResult.data || [];
+  const bansResult = previewData || !canManage
+    ? { data: [] }
+    : await listBans(classItem.id);
+  const bans = bansResult.data || [];
   const commentList = el('div', { class: 'stack' });
   const renderComments = () => {
     commentList.replaceChildren();
@@ -87,41 +97,93 @@ export const classDetailView = async ({
     rows: '2',
     placeholder: 'Tulis pesan untuk kelas...',
   });
+  const guard = commentGuard();
   const commentForm = el('form', {
-    class: 'row',
+    class: 'stack',
     onsubmit: async (event) => {
       event.preventDefault();
       if (!commentInput.value.trim()) return;
+      if (!await guard.beforeSend()) return;
       const result = await addClassComment(
         classItem.id,
         user.id,
         commentInput.value.trim(),
       );
       if (result.error) toast(result.error.message, 'error');
-      else onChanged?.();
+      else {
+        guard.onSent();
+        onChanged?.();
+      }
     },
   },
-  commentInput,
-  el('button', {
-    class: 'btn btn-primary',
-    type: 'submit',
-  }, 'Kirim'));
+  el('div', { class: 'row' },
+    commentInput,
+    el('button', {
+      class: 'btn btn-primary',
+      type: 'submit',
+    }, 'Kirim'),
+  ),
+  guard.node);
 
-  const memberList = el('div', { class: 'stack' },
-    ...members.map((member) => el('div', { class: 'row space panel glass' },
-      el('div', {},
-        el('strong', {},
-          `@${member.username || member.full_name || 'Pengguna'}`,
-        ),
-        el('span', {
-          class: `badge role-badge role-${member.role || 'member'}`,
-        }, roleLabel(member.role)),
-      ),
-      canManageMembers
-      && member.user_id !== user.id
-      && member.role !== 'owner'
-      && member.role !== 'developer'
-      && el('button', {
+  const openKickDialog = (member) => {
+    const reason = el('textarea', {
+      rows: '3',
+      maxlength: '500',
+      placeholder: 'Alasan dikeluarkan (boleh dikosongkan)',
+    });
+    const form = el('form', {
+      class: 'stack',
+      onsubmit: async (event) => {
+        event.preventDefault();
+        const result = await kickMember(
+          classItem.id,
+          member.user_id,
+          reason.value.trim() || null,
+        );
+        if (result.error) {
+          toast(result.error.message, 'error');
+          return;
+        }
+        toast(`@${member.username || 'Pengguna'} dikeluarkan dari kelas.`);
+        document.querySelector('.modal-backdrop')?.remove();
+        onChanged?.();
+      },
+    },
+    el('p', { class: 'muted small' },
+      'Pengguna ini tidak bisa masuk lagi ke kelas ini sampai kamu memberinya kode join ulang sekali pakai.'),
+    el('div', { class: 'field' }, el('label', {}, 'Alasan (opsional)'), reason),
+    el('button', { class: 'btn btn-danger-outline', type: 'submit' },
+      'Keluarkan dari kelas'),
+    );
+    openModal(`Keluarkan @${member.username || 'pengguna'}?`, form);
+  };
+
+  const viewerLevel = roleRank(viewerRole);
+  const canKick = (member) => {
+    if (viewerLevel < 1 || member.user_id === user.id) return false;
+    if (viewerRole === 'developer') return true;
+    if (member.user_id === classItem.owner_id) return false;
+    const targetLevel = roleRank(member.role);
+    if (viewerLevel === 1) return targetLevel <= 1;
+    return targetLevel <= 2;
+  };
+
+  const roleButtonFor = (member) => {
+    if (member.user_id === user.id) return null;
+    if (member.role === 'owner' || member.role === 'developer') return null;
+    if (viewerRole === 'admin') {
+      return member.role === 'member' && el('button', {
+        class: 'btn btn-soft',
+        type: 'button',
+        onclick: async () => {
+          const result = await setMemberRole(classItem.id, member.user_id, 'admin');
+          if (result.error) toast(result.error.message, 'error');
+          else onChanged?.();
+        },
+      }, 'Jadikan admin');
+    }
+    if (canManageMembers) {
+      return el('button', {
         class: 'btn btn-soft',
         type: 'button',
         onclick: async () => {
@@ -134,24 +196,95 @@ export const classDetailView = async ({
           if (result.error) toast(result.error.message, 'error');
           else onChanged?.();
         },
-      }, member.role === 'admin' ? 'Turunkan' : 'Jadikan admin'),
-      viewerRole === 'developer'
-      && member.user_id !== user.id
-      && member.role !== 'owner'
-      && el('button', {
-        class: 'btn btn-soft',
-        type: 'button',
-        onclick: async () => {
-          const result = await setMemberRole(
-            classItem.id,
-            member.user_id,
-            'owner',
-          );
-          if (result.error) toast(result.error.message, 'error');
-          else onChanged?.();
-        },
-      }, 'Jadikan owner'),
+      }, member.role === 'admin' ? 'Turunkan' : 'Jadikan admin');
+    }
+    return null;
+  };
+
+  const memberList = el('div', { class: 'stack' },
+    ...members.map((member) => el('div', { class: 'row space panel glass' },
+      el('div', {},
+        el('strong', {},
+          `@${member.username || member.full_name || 'Pengguna'}`,
+        ),
+        el('span', {
+          class: `badge role-badge role-${member.role || 'member'}`,
+        }, roleLabel(member.role)),
+      ),
+      el('div', { class: 'row' },
+        roleButtonFor(member),
+        viewerRole === 'developer'
+        && member.user_id !== user.id
+        && member.role !== 'owner'
+        && el('button', {
+          class: 'btn btn-soft',
+          type: 'button',
+          onclick: async () => {
+            const result = await setMemberRole(
+              classItem.id,
+              member.user_id,
+              'owner',
+            );
+            if (result.error) toast(result.error.message, 'error');
+            else onChanged?.();
+          },
+        }, 'Jadikan owner'),
+        canKick(member) && el('button', {
+          class: 'btn btn-danger-outline small',
+          type: 'button',
+          onclick: () => openKickDialog(member),
+        }, 'Keluarkan'),
+      ),
     )),
+  );
+
+  const banList = el('div', { class: 'stack' },
+    ...bans.map((ban) => {
+      const codeBox = el('span', { class: 'row' });
+      const showCode = (code, expiresAt) => {
+        codeBox.replaceChildren(
+          el('strong', { class: 'room-code' }, code),
+          el('button', {
+            class: 'btn btn-soft small',
+            type: 'button',
+            onclick: () => navigator.clipboard?.writeText(code),
+          }, 'Salin'),
+          expiresAt && el('span', { class: 'muted small' },
+            `Berlaku sampai ${new Date(expiresAt).toLocaleString('id-ID')}`),
+        );
+      };
+      if (ban.active_code) showCode(ban.active_code, ban.code_expires_at);
+      return el('div', { class: 'row space panel glass' },
+        el('div', {},
+          el('strong', {}, `@${ban.username || ban.full_name || 'Pengguna'}`),
+          el('p', { class: 'muted small' },
+            ban.reason || 'Tanpa alasan'),
+          el('span', { class: 'muted small' },
+            `Dikeluarkan oleh @${ban.kicked_by_username || 'pengurus'} · ${relativeTime(ban.created_at)}`),
+          codeBox,
+        ),
+        el('div', { class: 'row' },
+          el('button', {
+            class: 'btn btn-soft small',
+            type: 'button',
+            onclick: async () => {
+              const result = await createRejoinCode(classItem.id, ban.user_id);
+              if (result.error) toast(result.error.message, 'error');
+              else showCode(result.data, null);
+            },
+          }, 'Buat kode join ulang'),
+          el('button', {
+            class: 'btn btn-danger-outline small',
+            type: 'button',
+            onclick: async () => {
+              const result = await liftBan(classItem.id, ban.user_id);
+              if (result.error) toast(result.error.message, 'error');
+              else onChanged?.();
+            },
+          }, 'Cabut blokir'),
+        ),
+      );
+    }),
   );
 
   const leave = el('button', {
@@ -227,6 +360,12 @@ export const classDetailView = async ({
     el('section', { class: 'panel glass' },
       el('h2', {}, `Anggota (${members.length})`),
       memberList,
+    ),
+    canManage && bans.length > 0 && el('section', { class: 'panel glass' },
+      el('h2', {}, `Diblokir dari kelas (${bans.length})`),
+      el('p', { class: 'muted small' },
+        'Pengguna ini tidak bisa masuk kembali tanpa kode join ulang sekali pakai.'),
+      banList,
     ),
     el('section', { class: 'panel glass' },
       el('h2', {}, 'Obrolan kelas'),

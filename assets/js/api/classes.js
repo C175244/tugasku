@@ -10,8 +10,9 @@ export const createClass = (name) => getSupabase().rpc('create_class', {
   p_name: name,
 });
 
-export const joinClass = (code) => getSupabase().rpc('join_class', {
+export const joinClass = (code, rejoinCode = null) => getSupabase().rpc('join_class', {
   p_room_code: code,
+  p_rejoin_code: rejoinCode,
 });
 
 export const listMembers = (classId) => getSupabase().rpc('class_member_list', {
@@ -30,3 +31,24 @@ export const setMemberRole = (classId, userId, role) => getSupabase().rpc(
 export const leaveClass = (classId) => getSupabase().rpc('leave_class', {
   p_class_id: classId,
 });
+
+export const kickMember = (classId, userId, reason = null) => getSupabase().rpc(
+  'kick_member',
+  { p_class_id: classId, p_user_id: userId, p_reason: reason },
+);
+
+export const listBans = (classId) => getSupabase().rpc('class_ban_list', {
+  p_class_id: classId,
+});
+
+export const createRejoinCode = (classId, userId) => getSupabase().rpc(
+  'create_rejoin_code',
+  { p_class_id: classId, p_user_id: userId },
+);
+
+export const liftBan = (classId, userId) => getSupabase().rpc('lift_ban', {
+  p_class_id: classId,
+  p_user_id: userId,
+});
+
+export const myKickNotices = () => getSupabase().rpc('my_kick_notices');

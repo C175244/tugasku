@@ -23,6 +23,7 @@ import { taskDetailView } from './views/taskDetailView.js';
 import { profileView } from './views/profileView.js';
 import { startRealtime } from './realtime.js';
 import { isDeveloper, listDeveloperClasses } from './api/developer.js';
+import { myBanStatus } from './api/moderation.js';
 import { isAdminOrHigher } from './utils/roles.js';
 
 applyTheme();
@@ -45,6 +46,35 @@ const errorView = (error) => {
   text.className = 'error';
   text.textContent = error.message || 'Coba muat ulang halaman.';
   panel.append(title, text, retry);
+  const main = document.createElement('main');
+  main.className = 'shell center';
+  main.append(panel);
+  return main;
+};
+
+const bannedView = (status) => {
+  const panel = document.createElement('section');
+  panel.className = 'panel glass stack';
+  const title = document.createElement('h1');
+  title.textContent = 'Akun kamu diblokir';
+  const reason = document.createElement('p');
+  reason.textContent = status.expires_at
+    ? `Suspensi sampai ${new Date(status.expires_at).toLocaleString('id-ID')}.`
+    : 'Pemblokiran ini bersifat permanen.';
+  const detail = document.createElement('p');
+  detail.className = 'muted';
+  detail.textContent = status.reason
+    ? `Alasan: ${status.reason}`
+    : 'Tidak ada alasan yang diberikan.';
+  const logout = document.createElement('button');
+  logout.className = 'btn btn-soft';
+  logout.type = 'button';
+  logout.textContent = 'Keluar';
+  logout.onclick = async () => {
+    await signOut();
+    location.hash = '#/auth/signin';
+  };
+  panel.append(title, reason, detail, logout);
   const main = document.createElement('main');
   main.className = 'shell center';
   main.append(panel);
@@ -123,6 +153,14 @@ const render = async () => {
       location.hash = '#/auth/signin';
       return;
     }
+    const banResult = await myBanStatus();
+    if (!isCurrent()) return;
+    if (banResult.data?.banned) {
+      renderedUserId = null;
+      setHead('Akun diblokir');
+      app.replaceChildren(bannedView(banResult.data));
+      return;
+    }
     const classes = classesResult.data || [];
     const classData = await loadClassData(classes);
     if (!isCurrent()) return;
@@ -185,7 +223,7 @@ const render = async () => {
         schedules,
       });
     } else if (current.name === 'kelas') {
-      view = classListView(common);
+      view = await classListView(common);
     } else if (current.name === 'tugas' && current.id === 'baru') {
       view = taskFormView(common);
     } else if (

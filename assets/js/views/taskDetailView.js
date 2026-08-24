@@ -18,6 +18,7 @@ import {
   deleteComment,
 } from '../api/comments.js';
 import { getClassRole } from '../api/classes.js';
+import { commentGuard } from '../components/commentGuard.js';
 import { toast } from '../components/toast.js';
 import { progressFor } from '../store.js';
 import { formatBytes, titleCase } from '../utils/format.js';
@@ -211,11 +212,13 @@ export const taskDetailView = async ({
     rows: '2',
     placeholder: 'Tulis komentar...',
   });
+  const guard = commentGuard();
   const commentForm = el('form', {
-    class: 'row',
+    class: 'stack',
     onsubmit: async (event) => {
       event.preventDefault();
       if (!commentInput.value.trim()) return;
+      if (!await guard.beforeSend()) return;
       const result = await addTaskComment(
         task.id,
         task.class_id,
@@ -223,14 +226,20 @@ export const taskDetailView = async ({
         commentInput.value.trim(),
       );
       if (result.error) toast(result.error.message, 'error');
-      else onChanged?.();
+      else {
+        guard.onSent();
+        onChanged?.();
+      }
     },
   },
-  commentInput,
-  el('button', {
-    class: 'btn btn-primary',
-    type: 'submit',
-  }, 'Kirim'));
+  el('div', { class: 'row' },
+    commentInput,
+    el('button', {
+      class: 'btn btn-primary',
+      type: 'submit',
+    }, 'Kirim'),
+  ),
+  guard.node);
 
   const actions = el('div', { class: 'row' },
     currentStatus,
