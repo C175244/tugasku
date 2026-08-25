@@ -56,13 +56,14 @@ export const requestPasswordReset = (email, captchaToken = null) => getSupabase(
 // password karena reauthentication aktif di proyek.
 export const reauthenticate = () => getSupabase().auth.reauthenticate();
 
-// Memverifikasi kode reautentikasi. GoTrue mewajibkan email (atau telepon)
-// ikut terkirim; tanpa itu muncul error "Only an email address or phone
-// number should be provided on verify".
-export const verifyReauthOtp = (email, token) => getSupabase().auth.verifyOtp({
-  email,
-  token,
-  type: 'reauthentication',
+// Memasang password baru sekaligus memverifikasi kode reautentikasi.
+// PENTING: kode diverifikasi lewat field `nonce` pada updateUser (PUT /user)
+// — BUKAN lewat verifyOtp. Di server, verifyOtp tidak mengenali tipe
+// 'reauthentication' dan selalu menjawab "Token has expired or is invalid"
+// walau kodenya benar.
+export const updatePasswordWithNonce = (password, nonce) => getSupabase().auth.updateUser({
+  password,
+  nonce,
 });
 
 export const updatePassword = (password) => getSupabase().auth.updateUser({ password });
