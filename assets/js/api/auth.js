@@ -86,10 +86,10 @@ export const sendMagicLink = (email, captchaToken = null) => getSupabase().auth.
   },
 });
 
-// Mengirim email reset password. Isi emailnya link (template bawaan Supabase
-// tidak bisa diubah di paket gratis); link itu membuka kembali halaman yang
-// meminta (redirectTo) dengan sesi recovery, lalu aplikasi menampilkan
-// halaman pasang password baru.
+// Mengirim email reset password. Wajib menyertakan redirectTo ke halaman
+// yang memanggil (dengan pathname lengkap seperti /tugasku/index.html),
+// karena bila tidak diset, Supabase memakai "site URL" — di perangkat lama
+// itu bisa ter-resolve tanpa path sehingga GitHub Pages menampilkan 404.
 export const requestPasswordReset = (email, captchaToken = null) => getSupabase().auth.resetPasswordForEmail(
   email,
   {
