@@ -15,7 +15,8 @@ import {
   getSession,
   signOut,
   signInGoogle,
-  signInGooglePopup,
+  startGoogleVerify,
+  checkGoogleVerify,
   requestPasswordReset,
   updatePassword,
 } from '../api/auth.js';
@@ -108,7 +109,8 @@ const forgotDialog = (initialEmail) => {
     autocomplete: 'new-password',
   });
   const gError = el('p', { class: 'error' });
-  let gVerified = false;
+  // Begitu kembali dari Google, bila flag cocok → dianggap terverifikasi.
+  let gVerified = Boolean(checkGoogleVerify(email.value.trim() || ''));
   const gForm = el('form', {
     class: 'stack',
     onsubmit: async (event) => {
@@ -131,13 +133,9 @@ const forgotDialog = (initialEmail) => {
     type: 'button',
     onclick: () => {
       gError.textContent = '';
-      signInGooglePopup((session) => {
-        if (!session) { gError.textContent = 'Login Google dibatalkan.'; return; }
-        const same = session.user?.email?.toLowerCase() === email.value.trim().toLowerCase();
-        if (!same) { gError.textContent = 'Email Google tidak sama dengan email akun ini.'; return; }
-        gVerified = true;
-        toast(`Terverifikasi sebagai ${session.user.email}.`);
-      });
+      // Redirect penuh + flag; begitu kembali, konsol menampilkan langkah
+      // pasang password karena sudah terverifikasi email yang sama.
+      startGoogleVerify(email.value.trim(), 'lupa-password');
     },
   }, 'Lanjut lewat Google'),
   gCaptchaBox,
