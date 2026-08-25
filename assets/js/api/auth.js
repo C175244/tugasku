@@ -39,19 +39,27 @@ export const sendMagicLink = (email, captchaToken = null) => getSupabase().auth.
   },
 });
 
-// Mengirim kode reset password ke email (Supabase mengirim OTP lewat email
-// recovery). Berlaku untuk pengguna yang lupa password maupun akun login
-// Google yang belum punya password.
+// Mengirim email reset password. Isi emailnya link (template bawaan Supabase
+// tidak bisa diubah di paket gratis); link itu membuka kembali halaman yang
+// meminta (redirectTo) dengan sesi recovery, lalu aplikasi menampilkan
+// halaman pasang password baru.
 export const requestPasswordReset = (email, captchaToken = null) => getSupabase().auth.resetPasswordForEmail(
   email,
-  captchaToken ? { captchaToken } : {},
+  {
+    redirectTo: `${location.origin}${location.pathname}`,
+    ...(captchaToken ? { captchaToken } : {}),
+  },
 );
 
-// Memverifikasi kode dari email dan membuka sesi agar password bisa diganti.
-export const verifyRecoveryOtp = (email, token) => getSupabase().auth.verifyOtp({
-  email,
+// Meminta kode reautentikasi ke email pengguna yang sedang masuk. Email ini
+// bawaannya hanya berisi kode (tanpa link), dan wajib sebelum updateUser
+// password karena reauthentication aktif di proyek.
+export const reauthenticate = () => getSupabase().auth.reauthenticate();
+
+// Memverifikasi kode reautentikasi (memakai sesi aktif, tanpa perlu email).
+export const verifyReauthOtp = (token) => getSupabase().auth.verifyOtp({
   token,
-  type: 'recovery',
+  type: 'reauthentication',
 });
 
 export const updatePassword = (password) => getSupabase().auth.updateUser({ password });

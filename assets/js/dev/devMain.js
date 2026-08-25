@@ -16,7 +16,6 @@ import {
   signOut,
   signInGoogle,
   requestPasswordReset,
-  verifyRecoveryOtp,
   updatePassword,
 } from '../api/auth.js';
 import {
@@ -68,77 +67,99 @@ const centerShell = (...children) => el(
   el('section', { class: 'panel glass stack' }, ...children),
 );
 
-// Alur lupa password di konsol developer: minta kode (dengan token captcha
-// widget yang tampil di halaman ini), verifikasi kode, pasang password baru.
-const forgotDialog = (initialEmail, getCaptchaToken) => {
+// Alur lupa password di konsol developer: kirim link reset ke email (widget
+// captcha tampil di popup ini dan wajib lolos setiap pengiriman). Link di
+// email membuka kembali halaman ini dengan sesi recovery, lalu muncul
+// halaman pasang password baru (lihat onAuthStateChange di bawah).
+const forgotDialog = (initialEmail) => {
   const email = el('input', {
     type: 'email',
     required: true,
     value: initialEmail || '',
     placeholder: 'nama@email.com',
   });
-  const code = el('input', {
-    inputmode: 'numeric',
-    maxlength: '8',
-    placeholder: '8 digit kode dari email',
-    autocomplete: 'one-time-code',
-  });
-  const newPassword = el('input', {
-    type: 'password',
-    minlength: '6',
-    placeholder: 'Minimal 6 karakter',
-    autocomplete: 'new-password',
-  });
   const error = el('p', { class: 'error' });
-  let sent = false;
+  const captchaBox = el('div', { class: 'captcha-box' });
+  let captchaToken = null;
+  let widgetId = null;
+  if (turnstileAvailable()) {
+    mountTurnstile(captchaBox, (token) => { captchaToken = token; })
+      .then((id) => { widgetId = id; })
+      .catch((err) => toast(err.message, 'error'));
+  }
   const submit = el('button', {
     class: 'btn btn-primary wide',
     type: 'submit',
-  }, 'Kirim kode ke email');
-
-  // Kolom kode/password baru ditampilkan setelah kode terkirim.
-  const codeStep = el('div', {
-    class: 'stack',
-    style: 'display:none',
-  },
-  el('div', { class: 'field' }, el('label', {}, 'Kode dari email'), code),
-  el('div', { class: 'field' }, el('label', {}, 'Password baru'), newPassword));
+  }, 'Kirim link reset ke email');
 
   const form = el('form', {
     class: 'stack',
     onsubmit: async (event) => {
       event.preventDefault();
       error.textContent = '';
+      if (turnstileAvailable() && !captchaToken) {
+        error.textContent = 'Selesaikan dulu verifikasi bukan robot.';
+        return;
+      }
       submit.disabled = true;
       try {
-        if (!sent) {
-          const captchaToken = await getCaptchaToken();
-          const result = await requestPasswordReset(email.value.trim(), captchaToken);
-          if (result.error) throw result.error;
-          sent = true;
-          toast(`Kode dikirim ke ${email.value.trim()}.`);
-          submit.textContent = 'Simpan password baru';
-          codeStep.style.display = '';
-          return;
-        }
-        const check = await verifyRecoveryOtp(email.value.trim(), code.value.trim());
-        if (check.error) throw check.error;
-        const result = await updatePassword(newPassword.value);
+        const result = await requestPasswordReset(email.value.trim(), captchaToken);
         if (result.error) throw result.error;
-        toast('Password baru tersimpan. Silakan masuk.');
-        document.querySelector('.modal-backdrop')?.remove();
+        toast(`Link reset dikirim ke ${email.value.trim()}. Klik linknya, halaman pasang password akan terbuka di sini.`);
+        captchaToken = null;
+        if (widgetId != null && window.turnstile) window.turnstile.reset(widgetId);
       } catch (err) {
-        error.textContent = err.message || 'Kode salah atau kedaluwarsa.';
+        error.textContent = err.message || 'Link gagal dikirim.';
       } finally {
         submit.disabled = false;
       }
     },
   },
+  el('p', { class: 'muted small' },
+    'Masukkan email akun developer. Kami kirim link untuk pasang password baru.'),
   el('div', { class: 'field' }, el('label', {}, 'Email'), email),
-  codeStep,
+  captchaBox,
   error,
   submit);
   openModal('Lupa password', form);
+};
+
+// Halaman pasang password baru saat developer datang lewat link recovery.
+const resetPasswordView = () => {
+  const newPassword = el('input', {
+    type: 'password',
+    required: true,
+    minlength: '6',
+    placeholder: 'Minimal 6 karakter',
+    autocomplete: 'new-password',
+  });
+  const error = el('p', { class: 'error' });
+  const form = el('form', {
+    class: 'stack',
+    onsubmit: async (event) => {
+      event.preventDefault();
+      error.textContent = '';
+      const result = await updatePassword(newPassword.value);
+      if (result.error) {
+        error.textContent = result.error.message;
+        return;
+      }
+      toast('Password baru tersimpan. Silakan masuk.');
+      await signOut();
+      render();
+    },
+  },
+  el('div', { class: 'field' }, el('label', {}, 'Password baru'), newPassword),
+  error,
+  el('button', { class: 'btn btn-primary wide', type: 'submit' },
+    'Simpan password baru'));
+  return centerShell(
+    el('p', { class: 'eyebrow' }, 'Akses terbatas'),
+    el('h1', {}, 'Pasang password baru'),
+    el('p', { class: 'muted' },
+      'Kamu datang lewat link dari email. Pasang password barumu.'),
+    form,
+  );
 };
 
 const loginView = () => {
@@ -204,15 +225,7 @@ const loginView = () => {
   const forgotButton = el('button', {
     class: 'btn btn-soft',
     type: 'button',
-    onclick: () => forgotDialog(
-      email.value.trim(),
-      async () => {
-        if (turnstileAvailable() && !captchaToken) {
-          throw new Error('Selesaikan dulu verifikasi bukan robot.');
-        }
-        return captchaToken;
-      },
-    ),
+    onclick: () => forgotDialog(email.value.trim()),
   }, 'Lupa password');
 
   if (turnstileAvailable()) {
@@ -557,5 +570,13 @@ const render = async () => {
     render,
   ));
 };
+
+// Developer yang datang lewat link reset password di email mendapat sesi
+// recovery — tampilkan halaman pasang password baru, bukan dasbor.
+getSupabase().auth.onAuthStateChange((event) => {
+  if (event === 'PASSWORD_RECOVERY') {
+    app.replaceChildren(resetPasswordView());
+  }
+});
 
 render();

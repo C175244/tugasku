@@ -2,11 +2,11 @@
 import { el } from '../utils/dom.js';
 import { header, profileMenu } from '../components/header.js';
 import { bottomNav } from '../components/navTabs.js';
-import { updateProfile } from '../api/profile.js';
+import { updateProfile, usernameAvailable } from '../api/profile.js';
 import {
   signOut,
-  requestPasswordReset,
-  verifyRecoveryOtp,
+  reauthenticate,
+  verifyReauthOtp,
   updatePassword,
   hasPasswordIdentity,
 } from '../api/auth.js';
@@ -17,9 +17,9 @@ import { invisibleCaptcha } from '../components/turnstile.js';
 import { progressFor } from '../store.js';
 import { roleLabel } from '../utils/roles.js';
 
-// Ganti atau tambah password dengan verifikasi kode yang dikirim ke email
-// akun. Untuk akun yang login lewat Google saja, alur ini sekaligus
-// memasang password pertama kali.
+// Ganti atau tambah password: kode reautentikasi dikirim ke email akun
+// (email ini bawaan Supabase hanya berisi kode, tanpa link). Untuk akun yang
+// login lewat Google saja, alur ini sekaligus memasang password pertama.
 const passwordSection = (user) => {
   const hasPassword = hasPasswordIdentity(user);
   const email = user?.email || '';
@@ -28,12 +28,13 @@ const passwordSection = (user) => {
     : 'Akunmu masuk lewat Google dan belum punya password. Pasang password supaya bisa masuk dengan email juga. Kode verifikasi dikirim ke email akunmu.';
   const error = el('p', { class: 'error' });
   let sent = false;
-  // Captcha tak-kasat-mata — server menolak permintaan reset tanpa token.
+  // Captcha tak-kasat-mata, wajib lolos setiap kali kode diminta.
   const getCaptchaToken = invisibleCaptcha();
 
   const requestCode = async () => {
-    const captchaToken = await getCaptchaToken();
-    return requestPasswordReset(email, captchaToken);
+    // Captcha wajib lolos setiap kali kode diminta, sesuai aturan aplikasi.
+    await getCaptchaToken();
+    return reauthenticate();
   };
 
   const sendCode = el('button', {
@@ -74,7 +75,7 @@ const passwordSection = (user) => {
       event.preventDefault();
       error.textContent = '';
       try {
-        const check = await verifyRecoveryOtp(email, code.value.trim());
+        const check = await verifyReauthOtp(code.value.trim());
         if (check.error) throw check.error;
         const result = await updatePassword(newPassword.value);
         if (result.error) throw result.error;
@@ -210,8 +211,20 @@ export const profileView = async ({
       class: 'panel glass stack',
       onsubmit: async (event) => {
         event.preventDefault();
+        const nextUsername = username.value.trim();
+        if (nextUsername.toLowerCase() !== (profile?.username || '').toLowerCase()) {
+          const check = await usernameAvailable(nextUsername);
+          if (check.error) {
+            toast(check.error.message, 'error');
+            return;
+          }
+          if (!check.data) {
+            toast('Username sudah dipakai atau terlalu mirip dengan username lain. Bedakan minimal 3 karakter.', 'error');
+            return;
+          }
+        }
         const result = await updateProfile(user.id, {
-          username: username.value.trim(),
+          username: nextUsername,
           full_name: fullName.value.trim() || null,
         });
         if (result.error) toast(result.error.message, 'error');

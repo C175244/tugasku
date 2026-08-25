@@ -250,3 +250,36 @@ database (`supabase/upgrade-04-comment-length.sql`):
 
 1. Buka file tersebut di GitHub, salin seluruh isinya.
 2. Jalankan di **SQL Editor** dashboard Supabase.
+
+## 13. Pengumuman developer (upgrade-05)
+
+Developer bisa mengirim pengumuman yang muncul sebagai popup di aplikasi
+utama dan bisa dibaca ulang kapan saja lewat menu Pengumuman (ikon lonceng).
+Tabel `announcements` + RPC `send_announcement` ada di
+`supabase/upgrade-05-pengumuman.sql`:
+
+1. Buka file tersebut di GitHub, salin seluruh isinya.
+2. Jalankan di **SQL Editor** dashboard Supabase.
+
+## 14. Username unik beda minimal 3 karakter (upgrade-06)
+
+Username tidak boleh sama persis (tidak peka huruf besar/kecil) dan tidak
+boleh terlalu mirip dengan username lain — beda minimal 3 karakter.
+Misalnya sudah ada `NasiGoreng8`, maka `nasigoreng8`, `NasiGoreng89`,
+`NasiGoreng98` ditolak, tetapi `NasiGoreng7832` diterima. Aturan ditegakkan
+di database (`supabase/upgrade-06-username-unik.sql`):
+
+1. Buka file tersebut di GitHub, salin seluruh isinya.
+2. Jalankan di **SQL Editor** dashboard Supabase.
+
+## 15. Verifikasi email saat daftar
+
+Pendaftaran email+password sekarang wajib verifikasi email: setelah mengisi
+formulir dan captcha, pengguna menerima email berisi link konfirmasi; akun
+aktif dan otomatis masuk setelah link diklik. Pengaturan ini berarti
+**Confirm email AKTIF** di **Authentication > Sign In / Providers > Email**
+(nilai `mailer_autoconfirm = false`).
+
+Catatan: isi template email (misalnya mengganti link menjadi hanya kode)
+tidak bisa diubah pada paket gratis Supabase dengan pengirim email bawaan;
+perlu SMTP kustom atau upgrade paket.

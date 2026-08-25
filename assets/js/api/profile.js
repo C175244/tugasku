@@ -1,6 +1,11 @@
 // API profil pengguna saat ini.
 import { getSupabase } from '../supabaseClient.js';
 
+// true bila username boleh dipakai: belum ada yang memakai dan beda minimal
+// 3 karakter (tidak peka huruf besar/kecil) dari semua username yang ada.
+export const usernameAvailable = (username) => getSupabase()
+  .rpc('username_available', { p_username: username });
+
 export const getProfile = async () => {
   const { data, error } = await getSupabase()
     .from('profiles')

@@ -27,7 +27,13 @@ export const header = ({ title = 'TugasKu', back = false, onBack } = {}) => {
       );
     },
   }, smallIcon(getTheme() === 'dark' ? 'sun' : 'moon'));
-  const controls = el('div', { class: 'row' }, themeButton);
+  const bellButton = el('a', {
+    class: 'btn btn-soft icon-btn',
+    href: '#/pengumuman',
+    'aria-label': 'Notifikasi dari developer',
+    title: 'Notifikasi dari developer',
+  }, smallIcon('bell'));
+  const controls = el('div', { class: 'row' }, bellButton, themeButton);
   if (back) {
     controls.prepend(el('button', {
       class: 'btn btn-soft icon-btn',
