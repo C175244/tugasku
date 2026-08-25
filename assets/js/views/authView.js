@@ -4,7 +4,8 @@ import {
   signIn,
   signUp,
   signInGoogle,
-  signInGooglePopup,
+  startGoogleVerify,
+  checkGoogleVerify,
   sendMagicLink,
   requestPasswordReset,
   updatePassword,
@@ -90,7 +91,9 @@ const forgotView = () => {
       autocomplete: 'new-password',
     });
     const gError = el('p', { class: 'error' });
-    let verified = false;
+    // Begitu kembali dari Google, flag cocok → dianggap terverifikasi.
+    let verified = Boolean(checkGoogleVerify(email.value.trim()));
+    if (verified) toast(`${email.value.trim()} terverifikasi lewat Google. Pasang password barumu.`);
 
     const form = el('form', {
       class: 'stack',
@@ -118,16 +121,9 @@ const forgotView = () => {
       type: 'button',
       onclick: () => {
         gError.textContent = '';
-        signInGooglePopup((session) => {
-          if (!session) { gError.textContent = 'Login Google dibatalkan.'; return; }
-          const sameEmail = session.user?.email?.toLowerCase() === email.value.trim().toLowerCase();
-          if (!sameEmail) {
-            gError.textContent = `Email Google (${session.user?.email}) tidak sama dengan email akun ini. Pakai email yang sama.`;
-            return;
-          }
-          verified = true;
-          toast(`Terverifikasi sebagai ${session.user.email}. Pasang password barumu.`);
-        });
+        // Redirect penuh ke Google; begitu kembali, langkah ini menampilkan
+        // formulirnya otomatis karena flag cocok.
+        startGoogleVerify(email.value.trim(), 'lupa-password');
       },
     }, 'Lanjut lewat Google'),
     gCaptcha.box,
@@ -299,24 +295,27 @@ const signupPendingView = (email, password, username) => {
     }
   });
 
-  // Alternatif tanpa email: masuk lewat Google memakai email yang sama.
+  // Alternatif tanpa email: masuk lewat Google memakai email yang sama
+  // (redirect penuh + flag). Begitu kembali, flag cocok → pasang password
+  // dari data yang tadi tersimpan di extra, lalu akud aktif.
   const gError = el('p', { class: 'error' });
+  const verifiedFlag = checkGoogleVerify(email);
+  if (verifiedFlag) {
+    const { password: pass, username: name } = verifiedFlag.extra || {};
+    toast('Akun aktif lewat Google. Selamat datang!');
+    location.hash = '#/dashboard';
+    // Pasang password dan usernamenya (bila tersimpan) sekaligus.
+    if (pass || name) updatePassword(pass).catch(() => {});
+    renderApp();
+  }
   const gButton = el('button', {
     class: 'btn btn-soft wide',
     type: 'button',
     onclick: () => {
       gError.textContent = '';
-      signInGooglePopup((session) => {
-        if (!session) { gError.textContent = 'Login Google dibatalkan.'; return; }
-        const same = session.user?.email?.toLowerCase() === email.toLowerCase();
-        if (!same) {
-          gError.textContent = `Email Google (${session.user?.email}) beda dengan email yang didaftarkan.`;
-          return;
-        }
-        toast('Akun aktif. Selamat datang!');
-        location.hash = '#/dashboard';
-        renderApp();
-      });
+      // Simpan data daftar supaya setelah kembali dari Google, akun bisa
+      // diaktivasi dan password juga dipasang.
+      startGoogleVerify(email, 'daftar', { password, username });
     },
   }, 'Verifikasi lewat Google (tanpa email)');
 

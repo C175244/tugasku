@@ -9,7 +9,8 @@ import {
   updatePasswordWithNonce,
   getSession,
   getUser,
-  signInGooglePopup,
+  startGoogleVerify,
+  checkGoogleVerify,
   hasPasswordIdentity,
 } from '../api/auth.js';
 import { deleteMyAccount, deleteClass } from '../api/destructive.js';
@@ -240,27 +241,18 @@ const passwordSection = (user) => {
   const box = el('section', { class: 'panel glass stack' });
 
   // Langkah alternatif tanpa email: masuk lewat Google pakai email yang
-  // sama untuk membuktikan akun ini milikmu, lalu pasang password baru.
+  // sama (redirect penuh) — sesi Google itu cukup sebagai bukti kepemilikan.
   const googleVerify = el('button', {
     class: 'btn btn-soft',
     type: 'button',
-    onclick: () => {
-      error.textContent = '';
-      signInGooglePopup((session) => {
-        if (!session) { error.textContent = 'Login Google dibatalkan.'; return; }
-        const sameEmail = session.user?.email?.toLowerCase() === email.toLowerCase();
-        if (!sameEmail) {
-          error.textContent = `Email Google (${session.user?.email}) tidak sama dengan email akun ini.`;
-          return;
-        }
-        toast('Terverifikasi lewat Google. Sekarang minta kode tidak perlu — tapi kode email tetap yang paling aman.');
-        // Langsung tampilkan formulir; pengguna yang terverifikasi Google
-        // boleh memasang password (sesi Google = bukti kepemilikan).
-        sent = true;
-        rerender();
-      });
-    },
+    onclick: () => startGoogleVerify(email, 'ganti-password'),
   }, 'Lanjut lewat Google (tanpa email)');
+
+  // Begitu kembali dari Google, flag cocok → langsung tampilkan formulir.
+  if (checkGoogleVerify(email)) {
+    sent = true;
+    toast('Terverifikasi lewat Google. Pasang/ketik password barunya.');
+  }
 
   const rerender = () => {
     box.replaceChildren(

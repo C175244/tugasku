@@ -24,51 +24,33 @@ export const signInGoogle = async () => {
   });
 };
 
-// Versi Google sign-in yang membuka POPUP (bukan mengalihkan halaman), supaya
-// bisa dipakai sebagai alternatif verifikasi di tengah alur (misalnya lupa
-// password / pasang password) tanpa menutup formulirnya.
-// onSignedIn(session) dipanggil begitu popup selesai dan sesi didapat.
-export const signInGooglePopup = (onSignedIn) => {
-  const supabase = getSupabase();
-  let settled = false;
-  const finish = (session) => {
-    if (settled) return;
-    settled = true;
-    sub.data.subscription.unsubscribe();
-    window.removeEventListener('message', onMessage);
-    pollTimer && clearInterval(pollTimer);
-    onSignedIn(session);
-  };
-  // Dengarkan perubahan sesi (popup membawa sesi baru ke halaman kita).
-  const sub = supabase.auth.onAuthStateChange((event, session) => {
-    if (session && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
-      finish(session);
+// Verifikasi kepemilikan akun lewat Google sebagai alternatif kode email.
+// Menggunakan REDIRECT PENUH (bukan popup), jadi tahan di Android/browser
+// yang memblokir popup. Sebelum berangkat dibuatkan flag di sessionStorage;
+// begitu kembali, checkGoogleVerify() mengambil hasilnya.
+export const startGoogleVerify = (expectedEmail, purpose, extra = {}) => {
+  sessionStorage.setItem('tugasku.googleVerify', JSON.stringify({
+    email: expectedEmail,
+    purpose,
+    extra,
+    ts: Date.now(),
+  }));
+  return signInGoogle();
+};
+
+// true bila sesi saat ini ter-verifikasi lewat flag di atas dan emailnya
+// cocok; flag langsung dibersihkan (sekali pakai).
+export const checkGoogleVerify = (expectedEmail) => {
+  const raw = sessionStorage.getItem('tugasku.googleVerify');
+  if (!raw) return null;
+  try {
+    const flag = JSON.parse(raw);
+    if (flag.email?.toLowerCase() === expectedEmail?.toLowerCase()) {
+      sessionStorage.removeItem('tugasku.googleVerify');
+      return flag;
     }
-  });
-  // Fallback: pesan dari popup bila event tidak terdengar.
-  const onMessage = (event) => {
-    if (event.origin !== location.origin) return;
-    supabase.auth.getSession().then(({ data }) => {
-      if (data?.session) finish(data.session);
-    });
-  };
-  window.addEventListener('message', onMessage);
-  const pollTimer = setInterval(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data?.session) finish(data.session);
-    });
-  }, 1500);
-  supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: `${location.origin}${location.pathname}`,
-      skipBrowserRedirect: true,
-    },
-  }).then(({ data, error }) => {
-    if (error) { onSignedIn(null); return; }
-    window.open(data.url, 'tugasku-google', 'width=520,height=640');
-  });
-  return sub;
+  } catch { /* abaikan */ }
+  return null;
 };
 
 export const signUp = (email, password, username, captchaToken = null) => getSupabase().auth.signUp({
