@@ -1,137 +1,173 @@
-// Tutorial selangkah demi selangkah untuk pengguna baru: menjelaskan fungsi
-// tombol di aplikasi dan alur utama (buat kelas, isi jadwal, tambah tugas,
-// undang teman, jadikan admin). Bisa dilewati kapan saja.
+// Tur interaktif aplikasi: masing-masing langkah MENUNJUK satu elemen nyata
+// di layar (disorot, elemen lain gelap dan tidak bisa dipencet), lalu
+// pengguna benar-benar memencet elemen itu untuk melanjut. Pengguna bisa
+// "Lewati" kapan saja. Untuk pengguna baru, tur ini otomatis muncul.
 import { el } from '../utils/dom.js';
 import { STORAGE_KEYS } from '../utils/storageKeys.js';
 
+// Satu langkah tur: apa yang ditunjuk (selector), judul, penjelasan.
 const STEPS = [
   {
+    sel: null,
     title: 'Selamat datang di TugasKu!',
-    body: [
-      'TugasKu adalah aplikasi untuk mencatat tugas sekolah dan membagikannya ke teman sekelas, jadi tidak ada lagi tugas yang terlewat.',
-      'Kenali dulu layarnya. Di bar paling atas ada nama halaman, ikon LONCENG (pengumuman penting dari developer), dan ikon bulan/matahari (ganti tema gelap atau terang).',
-      'Di bar paling bawah ada 4 menu utama: BERANDA (tugas aktif), KELAS (daftar kelasmu), RIWAYAT (tugas selesai/lewat), dan PROFIL (pengaturan akun).',
-      'Tekan "Berikutnya" untuk ikut tur singkatnya, atau "Lewati" kalau mau langsung pakai aplikasinya.',
-    ],
+    body: 'Ini tur singkat, langkah demi langkah. Setiap langkah akan menyorot SATU bagian layar — hanya bagian itu yang bisa kamu pencet; yang lain gelap sementara. Ikuti sampai selesai supaya paham semua fiturnya, atau tekan "Lewati" untuk langsung pakai.',
   },
   {
-    title: 'Beranda: pusat tugasmu',
-    body: [
-      'Beranda menampilkan semua tugas yang masih aktif dari setiap kelas yang kamu ikuti.',
-      'Tugas dengan deadline paling dekat muncul paling atas, lengkap dengan label waktu seperti "hari ini" atau "2 hari lagi", supaya kamu tahu mana yang harus dikerjakan duluan.',
-      'Ada juga ringkasan progres tugasmu dan tombol hijau "+" untuk menambah tugas baru (dibahas di langkah ke-5).',
-    ],
+    sel: '.topbar .icon-btn[aria-label="Notifikasi dari developer"]',
+    title: 'Ikon lonceng — Pengumuman',
+    body: 'Ikon LONCENG di bar atas ini tempat semua pengumuman penting dari developer. Kalau ada popup pengumuman dan terlanjur kamu tutup, klik lonceng ini untuk membacanya lagi kapan saja. Coba klik sekarang — halaman Pengumuman akan terbuka.',
+    advanceOnClick: true,
   },
   {
-    title: 'Cara membuat kelas',
-    body: [
-      'Buka tab KELAS di bar bawah, lalu tekan tombol "Buat kelas".',
-      'Isi nama kelasmu, misalnya "X RPL 1", lalu simpan. Selesai!',
-      'Sistem otomatis membuat KODE ROOM 6 karakter. Kode inilah kunci kelasmu — simpan baik-baik, nanti dipakai untuk mengundang teman.',
-      'Kamu otomatis menjadi PEMILIK kelas. Pemilik punya wewenang penuh dan tidak bisa dikeluarkan oleh siapa pun.',
-    ],
+    sel: '.topbar .icon-btn[aria-label="Ganti tema"]',
+    title: 'Ikon bulan/matahari — Ganti tema',
+    body: 'Di samping lonceng ada ikon bulan/matahari. Fungsinya mengganti tema aplikasi: gelap atau terang. Coba klik — lihat tampilannya berubah.',
+    advanceOnClick: true,
   },
   {
+    sel: '.bottom-nav [data-nav="kelas"]',
+    title: 'Menu Kelas — tempat mengelola kelasmu',
+    body: 'Sekarang lihat bar paling bawah. Menu KELAS ini pintu masuk semua kelas yang kamu ikuti. Klik untuk membukanya.',
+    advanceOnClick: true,
+    toHash: '#/kelas',
+  },
+  {
+    sel: null,
+    title: 'Cara membuat kelas baru',
+    body: 'Di halaman Kelas, cari tombol "Buat kelas". Isi nama kelasmu (misalnya "X RPL 1") lalu simpan. Otomatis dibuatkan KODE ROOM 6 karakter — itu kunci untuk mengundang teman. Kamu langsung jadi PEMILIK kelas.',
+  },
+  {
+    sel: null,
     title: 'Cara menambah jadwal pelajaran',
-    body: [
-      'Buka kelasmu dari tab Kelas, lalu cari bagian "Jadwal".',
-      'Tambah jadwal: pilih HARI (Senin sampai Minggu), JAM mulai dan selesai, serta NAMA pelajarannya, misalnya "Matematika".',
-      'Jadwal ini penting diisi dulu, karena saat membuat tugas kamu akan memilih pelajaran dari daftar jadwal ini.',
-    ],
+    body: 'Setelah kelas dibuat, buka kelasnya. Di dalamnya ada bagian JADWAL — pilih hari, jam mulai-selesai, dan nama pelajaran (contoh: Matematika). Jadwal ini penting, karena saat buat tugas kamu memilih pelajaran dari sini.',
   },
   {
-    title: 'Cara menambah tugas',
-    body: [
-      'Tekan tombol hijau "+" di Beranda, atau buka kelasmu lalu tambah tugas dari sana.',
-      'Isi JUDUL tugas, pilih KELAS dan PELAJARAN, lalu tentukan tanggal dan jam DEADLINE-nya. Terakhir tekan simpan.',
-      'Kamu juga bisa menambah lampiran/link dan komentar untuk informasi tambahan seperti halaman buku atau catatan guru.',
-      'Begitu disimpan, tugas langsung terlihat oleh SEMUA anggota kelas — tidak perlu kirim satu-satu.',
-    ],
+    sel: 'a[href="#/tugas/baru"]',
+    title: 'Tombol tambah tugas',
+    body: 'Tombol "+ Tambah tugas" ini untuk menambah tugas. Klik — akan terbuka formulir: isi judul tugas, pilih kelas & pelajaran, tentukan tanggal dan jam deadline. Semua anggota kelas langsung melihatnya. Kalau sedang tidak ingin buat, tutup formulirnya dan lanjut tur.',
+    advanceOnClick: true,
+    toHash: '#/tugas/baru',
   },
   {
+    sel: null,
     title: 'Cara menambah anggota kelas',
-    body: [
-      'Di halaman kelas ada kode room 6 karakter. Salin kode itu, lalu bagikan ke temanmu lewat chat atau media sosial.',
-      'Temanmu tinggal buka tab KELAS, tekan "Gabung kelas", masukkan kodenya — langsung jadi anggota.',
-      'Anggota baru otomatis bisa melihat jadwal pelajaran dan semua tugas di kelas itu.',
-    ],
+    body: 'Di halaman kelas ada kode room 6 karakter. Salin kodenya, kirim ke temanmu. Temanmu buka tab KELAS, tekan "Gabung kelas", masukkan kodenya — langsung jadi anggota dan bisa melihat semua tugas.',
   },
   {
-    title: 'Cara menjadikan orang lain admin',
-    body: [
-      'Hanya PEMILIK kelas yang bisa melakukan ini.',
-      'Buka halaman kelas, lihat daftar anggota, lalu tekan tombol di samping nama teman yang kamu percaya.',
-      'Pilih "Jadikan admin". Admin bisa membantu mengelola tugas, jadwal, dan anggota — cocok untuk ketua kelas atau wakilnya.',
-      'Tenang, pemilik tetap level tertinggi: admin tidak bisa mengeluarkan atau mengubah pemilik.',
-    ],
+    sel: null,
+    title: 'Cara menjadikan teman sebagai admin',
+    body: 'Hanya PEMILIK kelas yang bisa. Buka halaman kelas, di daftar anggota tekan tombol di samping nama temanmu, pilih "Jadikan admin". Admin bisa bantu mengelola tugas, jadwal, dan anggota — cocok untuk ketua/wakil kelas. Pemilik tetap yang tertinggi.',
   },
   {
-    title: 'Riwayat, pengumuman, dan profil',
-    body: [
-      'RIWAYAT berisi semua tugas yang sudah selesai atau sudah lewat deadline, jadi kamu bisa mengecek apa saja yang sudah dikerjakan.',
-      'Ikon LONCENG di bar atas berisi pengumuman penting dari developer. Kalau popup-nya terlanjur ditutup, buka lagi lewat ikon ini kapan saja.',
-      'PROFIL adalah tempat mengubah nama, foto profil, dan username, memasang atau mengganti password, serta tombol keluar akun.',
-    ],
+    sel: '.bottom-nav [data-nav="riwayat"]',
+    title: 'Menu Riwayat — arsip tugas',
+    body: 'Menu RIWAYAT berisi semua tugas yang sudah selesai atau sudah lewat deadline, jadi kamu bisa cek kembali pekerjaanmu. Klik untuk melihatnya.',
+    advanceOnClick: true,
+    toHash: '#/riwayat',
   },
   {
-    title: 'Selesai, selamat belajar!',
-    body: [
-      'Itu tadi semua dasar-dasarnya. Tutorial ini bisa dibuka lagi kapan saja lewat Profil, tombol "Ulangi tutorial".',
-      'Sekarang coba langsung: buat kelas pertamamu, isi jadwal pelajarannya, undang teman sekelas, lalu tambah tugas pertama. Semangat!',
-    ],
+    sel: '.bottom-nav [data-nav="profil"]',
+    title: 'Menu Profil — akunmu',
+    body: 'Menu PROFIL untuk ubah nama, foto profil, username, pasang/ganti password, dan keluar akun. Klik untuk membukanya.',
+    advanceOnClick: true,
+    toHash: '#/profil',
+  },
+  {
+    sel: null,
+    title: 'Selesai — selamat belajar!',
+    body: 'Kamu sudah tahu semua dasar TugasKu. Sekarang langsung praktik: buat kelas pertama, isi jadwal pelajarannya, undang teman sekelas, lalu tambah tugas pertama. Tur ini bisa dibuka ulang kapan saja lewat Profil, tombol "Ulangi tutorial". Semangat!',
   },
 ];
 
-// Menampilkan overlay tutorial. onDone dipanggil saat ditutup (lewati/selesai).
-export const showTutorial = (onDone = () => {}) => {
-  let step = 0;
-  const body = el('div', { class: 'stack' });
-  const counter = el('p', { class: 'muted small' });
-  const skip = el('button', {
-    class: 'btn btn-soft',
-    type: 'button',
-  }, 'Lewati');
-  const next = el('button', {
-    class: 'btn btn-primary',
-    type: 'button',
-  }, 'Berikutnya');
-  const close = () => {
-    backdrop.remove();
-    onDone();
-  };
-  skip.addEventListener('click', close);
-  next.addEventListener('click', () => {
-    if (step >= STEPS.length - 1) {
-      close();
-      return;
-    }
-    step += 1;
-    paint();
-  });
-  const paint = () => {
-    const current = STEPS[step];
-    counter.textContent = `Langkah ${step + 1} dari ${STEPS.length}`;
-    next.textContent = step === STEPS.length - 1 ? 'Selesai' : 'Berikutnya';
-    body.replaceChildren(
-      el('h2', {}, current.title),
-      ...current.body.map((text) => el('p', { class: 'muted small' }, text)),
-    );
-  };
-  const backdrop = el('div', { class: 'modal-backdrop' },
-    el('div', {
-      class: 'modal glass stack',
-      role: 'dialog',
-      'aria-modal': 'true',
-      'aria-label': 'Tutorial TugasKu',
-    },
-    body,
-    counter,
-    el('div', { class: 'row' }, skip, next)));
-  paint();
-  document.body.append(backdrop);
+let active = null;
+
+const end = () => {
+  if (!active) return;
+  const { overlay, target, cleanup } = active;
+  cleanup?.();
+  overlay.remove();
+  if (target) target.classList.remove('tour-target');
+  active = null;
 };
 
-// Menampilkan tutorial otomatis sekali per pengguna (untuk akun baru).
+// Membuat langkah: highlight elemen (jika ada), tampilkan panel teks.
+const paintStep = (index) => {
+  const { overlay, panel } = active;
+  const step = STEPS[index];
+  // Bersihkan sorotan langkah sebelumnya.
+  const prev = document.querySelector('.tour-target');
+  if (prev) prev.classList.remove('tour-target');
+
+  let target = null;
+  if (step.sel) target = document.querySelector(step.sel);
+  active.target = target;
+  if (target) target.classList.add('tour-target');
+
+  panel.replaceChildren(
+    el('h2', {}, step.title),
+    el('p', { class: 'muted small' }, step.body),
+    el('p', { class: 'muted small' }, `Langkah ${index + 1} dari ${STEPS.length}`),
+    el('div', { class: 'row' },
+      el('button', {
+        class: 'btn btn-soft',
+        type: 'button',
+        onclick: () => { end(); },
+      }, 'Lewati'),
+      !step.advanceOnClick && el('button', {
+        class: 'btn btn-primary',
+        type: 'button',
+        onclick: () => go(index + 1),
+      }, index === STEPS.length - 1 ? 'Selesai' : 'Berikutnya'),
+    ),
+  );
+  overlay.replaceChildren(panel);
+};
+
+const go = (index) => {
+  if (index >= STEPS.length) { end(); return; }
+  const step = STEPS[index];
+  if (step.toHash) location.hash = step.toHash;
+  active.index = index;
+  // Beri waktu halaman berganti sebelum mencari elemen target.
+  setTimeout(() => paintStep(index), 120);
+};
+
+// Memulai tur. onDone dipanggil saat ditutup.
+export const showTutorial = (onDone = () => {}) => {
+  if (active) return;
+  const overlay = el('div', { class: 'tour-overlay' });
+  const panel = el('div', { class: 'tour-panel glass stack' });
+  overlay.append(panel);
+
+  // Blok semua klik di aplikasi kecuali pada elemen target tur / panel.
+  const onClick = (event) => {
+    const target = active.target;
+    const inPanel = panel.contains(event.target);
+    const onTarget = target && target.contains(event.target);
+    if (inPanel) return; // tombol Lewati/Berikutnya boleh
+    if (onTarget) {
+      // Biarkan elemen bekerja, lalu lanjut ke langkah berikutnya.
+      const step = STEPS[active.index];
+      if (step?.advanceOnClick) setTimeout(() => go(active.index + 1), 60);
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+  };
+  document.addEventListener('click', onClick, true);
+
+  active = {
+    overlay,
+    panel,
+    target: null,
+    index: 0,
+    cleanup: () => document.removeEventListener('click', onClick, true),
+  };
+  document.body.append(overlay);
+  paintStep(0);
+};
+
+// Tampilkan otomatis sekali per pengguna (untuk akun baru).
 export const maybeShowTutorial = (userId) => {
   const key = STORAGE_KEYS.tutorial(userId);
   if (localStorage.getItem(key)) return;

@@ -50,7 +50,15 @@ const passwordSection = (user) => {
         toast(`Kode dikirim ke ${email}. Cek kotak masuk atau folder spam.`);
         rerender();
       } catch (err) {
-        error.textContent = err.message || 'Kode gagal dikirim.';
+        // Kode reautentikasi yang dikirim sebelumnya MASIH BERLAKU, jadi
+        // kalau email kena rate limit, arahkan pengguna pakai kode lama.
+        if (/rate limit/i.test(err.message || '')) {
+          error.textContent = 'Pengiriman email sementara dibatasi. Kalau kamu sudah punya kode dari email sebelumnya, langsung pakai di bawah ini.';
+          sent = true;
+          rerender();
+        } else {
+          error.textContent = err.message || 'Kode gagal dikirim.';
+        }
       } finally {
         sendCode.disabled = false;
       }
@@ -97,7 +105,7 @@ const passwordSection = (user) => {
     },
   },
   el('p', { class: 'muted small' },
-    `Kode sudah dikirim ke ${email}. Kode berlaku 1 jam.`),
+    `Kode dikirim ke ${email}. Kalau kode tidak sampai, cek folder spam; kode terakhir yang dikirim masih berlaku, jadi tidak perlu minta terus-terusan.`),
   el('div', { class: 'field' }, el('label', {}, 'Kode dari email'), code),
   el('div', { class: 'field' },
     el('label', {}, hasPassword ? 'Password baru' : 'Password'),

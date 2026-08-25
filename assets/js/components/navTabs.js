@@ -17,6 +17,7 @@ export const bottomNav = (active) => el(
     {
       class: `nav-item ${active === route ? 'active' : ''}`,
       href: `#/${route}`,
+      'data-nav': route,
     },
     icon(name),
     el('span', {}, label),
