@@ -68,7 +68,10 @@ export const updatePasswordWithNonce = (password, nonce) => getSupabase().auth.u
 
 export const updatePassword = (password) => getSupabase().auth.updateUser({ password });
 
-// true bila akun belum punya password (misalnya daftar lewat Google saja).
+// true bila akun punya cara masuk email+password. Deteksi dua lapis: (1)
+// identity "email" di daftar identities — kadang belum terisi tepat setelah
+// password dipasang — dan (2) penanda lokal yang disimpan begitu password
+// benar-benar berhasil terpasang di perangkat ini.
 export const hasPasswordIdentity = (user) => Boolean(
   user?.identities?.some((identity) => identity.provider === 'email'),
 );

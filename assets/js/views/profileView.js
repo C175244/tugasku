@@ -7,6 +7,7 @@ import {
   signOut,
   reauthenticate,
   updatePasswordWithNonce,
+  getSession,
   hasPasswordIdentity,
 } from '../api/auth.js';
 import { deleteMyAccount, deleteClass } from '../api/destructive.js';
@@ -108,8 +109,12 @@ const accountSettings = (user) => {
 // (email ini bawaan Supabase hanya berisi kode, tanpa link). Untuk akun yang
 // login lewat Google saja, alur ini sekaligus memasang password pertama.
 const passwordSection = (user) => {
-  // true setelah password benar-benar terpasang (meski akun tadinya Google).
-  let hasPassword = hasPasswordIdentity(user);
+  // true setelah password benar-benar terpasang. Deteksi utama lewat
+  // identities, ditambah penanda lokal: begitu password berhasil dipasang
+  // di sini, aplikasi menyimpan mask-nya — keberadaan mask berarti akun ini
+  // sudah punya password.
+  let hasPassword = hasPasswordIdentity(user)
+    || Boolean(localStorage.getItem(STORAGE_KEYS.passwordMask(user.id)));
   const email = user?.email || '';
   const intro = hasPassword
     ? 'Kode verifikasi akan dikirim ke email akunmu sebelum password bisa diganti.'
@@ -184,6 +189,7 @@ const passwordSection = (user) => {
         const wasGoogleOnly = !hasPassword;
         const p = newPassword.value;
         const mask = p.length <= 4 ? '••••' : `${p.slice(0, 2)}${'*'.repeat(Math.max(4, p.length - 4))}${p.slice(-2)}`;
+        // Simpan mask sebagai penanda bahwa akun ini kini punya password.
         localStorage.setItem(STORAGE_KEYS.passwordMask(user.id), mask);
         hasPassword = true;
         toast(wasGoogleOnly
@@ -192,6 +198,8 @@ const passwordSection = (user) => {
         sent = false;
         code.value = '';
         newPassword.value = '';
+        // Muat ulang sesi supaya daftar identities ikut segar.
+        getSession().catch(() => {});
         rerender();
       } catch (err) {
         error.textContent = err.message?.includes('Nonce')
