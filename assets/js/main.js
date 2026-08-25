@@ -26,6 +26,7 @@ import {
   showLatestAnnouncement,
 } from './views/announcementView.js';
 import { listAnnouncements } from './api/announcements.js';
+import { maybeShowTutorial } from './components/tutorial.js';
 import { startRealtime } from './realtime.js';
 import { isDeveloper, listDeveloperClasses } from './api/developer.js';
 import { myBanStatus } from './api/moderation.js';
@@ -211,6 +212,8 @@ const render = async () => {
     }
     // Popup pengumuman terbaru (sekali per pesan) untuk semua pengguna.
     showLatestAnnouncement().catch(() => {});
+    // Tur aplikasi otomatis untuk akun yang belum pernah melihatnya.
+    maybeShowTutorial(session.user.id);
 
     const current = route();
     const common = {

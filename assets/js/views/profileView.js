@@ -6,14 +6,14 @@ import { updateProfile, usernameAvailable } from '../api/profile.js';
 import {
   signOut,
   reauthenticate,
-  verifyReauthOtp,
-  updatePassword,
+  updatePasswordWithNonce,
   hasPasswordIdentity,
 } from '../api/auth.js';
 import { deleteMyAccount, deleteClass } from '../api/destructive.js';
 import { toast } from '../components/toast.js';
 import { openDestructiveDialog } from '../components/modal.js';
 import { invisibleCaptcha } from '../components/turnstile.js';
+import { showTutorial } from '../components/tutorial.js';
 import { progressFor } from '../store.js';
 import { roleLabel } from '../utils/roles.js';
 
@@ -75,9 +75,12 @@ const passwordSection = (user) => {
       event.preventDefault();
       error.textContent = '';
       try {
-        const check = await verifyReauthOtp(email, code.value.trim());
-        if (check.error) throw check.error;
-        const result = await updatePassword(newPassword.value);
+        // Kode + password baru dikirim sekaligus; server memverifikasi kode
+        // (nonce) dan menyimpan password dalam satu permintaan.
+        const result = await updatePasswordWithNonce(
+          newPassword.value,
+          code.value.trim(),
+        );
         if (result.error) throw result.error;
         toast(hasPassword
           ? 'Password berhasil diganti.'
@@ -87,7 +90,9 @@ const passwordSection = (user) => {
         newPassword.value = '';
         rerender();
       } catch (err) {
-        error.textContent = err.message || 'Kode salah atau kedaluwarsa.';
+        error.textContent = err.message?.includes('Nonce')
+          ? 'Kode salah atau sudah kedaluwarsa. Minta kode baru.'
+          : (err.message || 'Kode salah atau kedaluwarsa.');
       }
     },
   },
@@ -320,6 +325,16 @@ export const profileView = async ({
     ),
     form,
     passwordSection(user),
+    el('section', { class: 'panel glass' },
+      el('h2', {}, 'Bantuan'),
+      el('p', { class: 'muted small' },
+        'Baru pertama pakai TugasKu atau lupa cara pakainya? Buka lagi panduan langkah demi langkah.'),
+      el('button', {
+        class: 'btn btn-soft',
+        type: 'button',
+        onclick: () => showTutorial(),
+      }, 'Ulangi tutorial'),
+    ),
     el('section', { class: 'panel glass' },
       el('h2', {}, 'Kelas kamu'),
       el('div', { class: 'stack' },

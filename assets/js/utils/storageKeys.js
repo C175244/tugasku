@@ -6,4 +6,5 @@ export const STORAGE_KEYS = {
   filters: 'tugasku.filters',
   cleanup: 'tugasku.cleanup90',
   announcementSeen: 'tugasku.announcementSeen',
+  tutorial: (userId) => `tugasku.tutorial.${userId}`,
 };
