@@ -8,6 +8,7 @@ import {
   reauthenticate,
   updatePasswordWithNonce,
   getSession,
+  signInGooglePopup,
   hasPasswordIdentity,
 } from '../api/auth.js';
 import { deleteMyAccount, deleteClass } from '../api/destructive.js';
@@ -198,8 +199,6 @@ const passwordSection = (user) => {
         sent = false;
         code.value = '';
         newPassword.value = '';
-        // Muat ulang sesi supaya daftar identities ikut segar.
-        getSession().catch(() => {});
         rerender();
       } catch (err) {
         error.textContent = err.message?.includes('Nonce')
@@ -232,6 +231,30 @@ const passwordSection = (user) => {
   ));
 
   const box = el('section', { class: 'panel glass stack' });
+
+  // Langkah alternatif tanpa email: masuk lewat Google pakai email yang
+  // sama untuk membuktikan akun ini milikmu, lalu pasang password baru.
+  const googleVerify = el('button', {
+    class: 'btn btn-soft',
+    type: 'button',
+    onclick: () => {
+      error.textContent = '';
+      signInGooglePopup((session) => {
+        if (!session) { error.textContent = 'Login Google dibatalkan.'; return; }
+        const sameEmail = session.user?.email?.toLowerCase() === email.toLowerCase();
+        if (!sameEmail) {
+          error.textContent = `Email Google (${session.user?.email}) tidak sama dengan email akun ini.`;
+          return;
+        }
+        toast('Terverifikasi lewat Google. Sekarang minta kode tidak perlu — tapi kode email tetap yang paling aman.');
+        // Langsung tampilkan formulir; pengguna yang terverifikasi Google
+        // boleh memasang password (sesi Google = bukti kepemilikan).
+        sent = true;
+        rerender();
+      });
+    },
+  }, 'Lanjut lewat Google (tanpa email)');
+
   const rerender = () => {
     box.replaceChildren(
       el('div', {},
@@ -240,6 +263,8 @@ const passwordSection = (user) => {
       ),
       el('p', { class: 'muted small' }, intro),
       sendCode,
+      el('p', { class: 'small muted' }, 'Email tidak sampai / kena batas? '),
+      googleVerify,
       sent && form,
       error,
     );

@@ -4,9 +4,11 @@ import {
   signIn,
   signUp,
   signInGoogle,
+  signInGooglePopup,
   sendMagicLink,
   requestPasswordReset,
   updatePassword,
+  hasPasswordIdentity,
 } from '../api/auth.js';
 import { usernameAvailable } from '../api/profile.js';
 import { toast } from '../components/toast.js';
@@ -71,7 +73,77 @@ const forgotView = () => {
     if (result.error) throw result.error;
   };
 
+  // Langkah alternatif tanpa email: masuk lewat Google memakai email yang
+  // sama, lalu pasang password baru (dengan captcha). Dipakai saat kode
+  // email kena rate limit.
+  const googleStep = () => {
+    const gCaptcha = visibleCaptcha();
+    const newPassword = el('input', {
+      type: 'password',
+      required: true,
+      minlength: '6',
+      placeholder: 'Minimal 6 karakter',
+      autocomplete: 'new-password',
+    });
+    const gError = el('p', { class: 'error' });
+    let verified = false;
+
+    const form = el('form', {
+      class: 'stack',
+      onsubmit: async (event) => {
+        event.preventDefault();
+        gError.textContent = '';
+        if (!verified) {
+          gError.textContent = 'Masuk dulu dengan Google pakai email yang sama.';
+          return;
+        }
+        if (!gCaptcha.ok()) {
+          gError.textContent = 'Selesaikan dulu verifikasi bukan robot.';
+          return;
+        }
+        const result = await updatePassword(newPassword.value);
+        if (result.error) { gError.textContent = result.error.message; gCaptcha.reset(); return; }
+        toast('Password baru tersimpan. Silakan masuk.');
+        location.hash = '#/auth/signin';
+      },
+    },
+    el('p', { class: 'muted small' },
+      'Tidak bisa menerima email? Masuk lewat Google dengan email yang sama — itu cukup untuk membuktikan akun ini milikmu. Setelah itu pasang password baru di sini.'),
+    el('button', {
+      class: 'btn btn-soft wide',
+      type: 'button',
+      onclick: () => {
+        gError.textContent = '';
+        signInGooglePopup((session) => {
+          if (!session) { gError.textContent = 'Login Google dibatalkan.'; return; }
+          const sameEmail = session.user?.email?.toLowerCase() === email.value.trim().toLowerCase();
+          if (!sameEmail) {
+            gError.textContent = `Email Google (${session.user?.email}) tidak sama dengan email akun ini. Pakai email yang sama.`;
+            return;
+          }
+          verified = true;
+          toast(`Terverifikasi sebagai ${session.user.email}. Pasang password barumu.`);
+        });
+      },
+    }, 'Lanjut lewat Google'),
+    gCaptcha.box,
+    el('div', { class: 'field' }, el('label', {}, 'Password baru'), newPassword),
+    gError,
+    el('button', {
+      class: 'btn btn-primary wide',
+      type: 'submit',
+    }, 'Pasang password'),
+    el('p', { class: 'small muted' },
+      el('a', {
+        href: '#/auth/forgot',
+        onclick: (e) => { e.preventDefault(); step = 'email'; rerender(); },
+      }, '‹ Kembali kirim lewat email')),
+    );
+    return form;
+  };
+
   const renderStep = () => {
+    if (step === 'google') return googleStep();
     if (step === 'email') {
       const submit = el('button', {
         class: 'btn btn-primary wide',
@@ -99,7 +171,14 @@ const forgotView = () => {
         'Masukkan email akunmu. Kami kirim link untuk pasang password baru.'),
       el('div', { class: 'field' }, el('label', {}, 'Email'), email),
       error,
-      submit);
+      submit,
+      el('p', { class: 'small muted' },
+        'Email tidak sampai? ',
+        el('a', {
+          href: '#/auth/forgot',
+          onclick: (e) => { e.preventDefault(); step = 'google'; rerender(); },
+        }, 'Lanjut lewat Google (tanpa email)'),
+      ));
     }
 
     const resend = el('button', {
