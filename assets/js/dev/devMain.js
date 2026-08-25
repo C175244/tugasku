@@ -32,7 +32,7 @@ import {
 import { deleteClass } from '../api/destructive.js';
 import { setHead } from '../components/head.js';
 import { relativeTime, formatDeadline } from '../utils/datetime.js';
-import { listAnnouncements, sendAnnouncement } from '../api/announcements.js';
+import { listAnnouncements, sendAnnouncement, pinAnnouncement } from '../api/announcements.js';
 import { roleLabel } from '../utils/roles.js';
 
 applyTheme();
@@ -449,39 +449,56 @@ const announcementPanel = (announcements, onChanged) => {
     required: true,
     placeholder: 'Tulis pengumuman untuk semua pengguna...',
   });
+  const pinnedCheckbox = el('input', { type: 'checkbox' });
   const error = el('p', { class: 'error' });
   const form = el('form', {
     class: 'stack',
     onsubmit: async (event) => {
       event.preventDefault();
       error.textContent = '';
-      const result = await sendAnnouncement(input.value);
+      const result = await sendAnnouncement(input.value, pinnedCheckbox.checked);
       if (result.error) {
         error.textContent = result.error.message;
         return;
       }
       input.value = '';
+      pinnedCheckbox.checked = false;
       toast('Pengumuman terkirim ke semua pengguna.');
       onChanged();
     },
   },
   el('div', { class: 'field' }, el('label', {}, 'Pesan'), input),
+  el('label', { class: 'row' },
+    pinnedCheckbox,
+    el('span', {}, 'Pin (tampil juga untuk pengguna baru)'),
+  ),
   error,
   el('button', { class: 'btn btn-primary', type: 'submit' },
     'Kirim ke semua pengguna'),
   );
+  // Riwayat + tombol un/pin per pesan.
+  const history = el('div', { class: 'stack' },
+    ...announcements.map((item) => el('div', { class: 'panel glass stack' },
+      el('div', { class: 'row space' },
+        el('span', { class: 'muted small' }, formatDeadline(item.created_at)),
+        el('button', {
+          class: item.pinned ? 'btn btn-primary' : 'btn btn-soft',
+          type: 'button',
+          onclick: async () => {
+            const r = await pinAnnouncement(item.id, !item.pinned);
+            if (r.error) toast(r.error.message, 'error');
+            else onChanged();
+          },
+        }, item.pinned ? 'Buka pin' : 'Pin'),
+      ),
+      el('p', { style: 'white-space:pre-wrap;margin:0' }, item.body),
+    )),
+  );
   return el('section', { class: 'panel glass stack' },
     el('h2', {}, 'Pengumuman untuk semua pengguna'),
     form,
-    el('h3', {}, 'Riwayat pengumuman'),
-    announcements.length
-      ? el('div', { class: 'stack' },
-        ...announcements.map((item) => el('div', { class: 'stack' },
-          el('p', { class: 'muted small' }, formatDeadline(item.created_at)),
-          el('p', { style: 'white-space:pre-wrap;margin:0' }, item.body),
-        )),
-      )
-      : el('p', { class: 'muted' }, 'Belum ada pengumuman terkirim.'),
+    el('h3', {}, 'Riwayat'),
+    history,
   );
 };
 

@@ -26,7 +26,6 @@ import {
   showLatestAnnouncement,
 } from './views/announcementView.js';
 import { listAnnouncements } from './api/announcements.js';
-import { maybeShowTutorial } from './components/tutorial.js';
 import { startRealtime } from './realtime.js';
 import { isDeveloper, listDeveloperClasses } from './api/developer.js';
 import { myBanStatus } from './api/moderation.js';
@@ -210,10 +209,10 @@ const render = async () => {
     if (localStorage.getItem('tugasku.cleanup90') === 'true') {
       cleanupTasks().catch(() => {});
     }
-    // Popup pengumuman terbaru (sekali per pesan) untuk semua pengguna.
-    showLatestAnnouncement().catch(() => {});
-    // Tur aplikasi otomatis untuk akun yang belum pernah melihatnya.
-    maybeShowTutorial(session.user.id);
+    // Popup pengumuman terbaru (hanya yang pinned atau lebih baru daripada
+    // akun dibuat) untuk semua pengguna.
+    showLatestAnnouncement(profile).catch(() => {});
+    // Tur aplikasi yang tidak dibutuhkan lagi.
 
     const current = route();
     const common = {

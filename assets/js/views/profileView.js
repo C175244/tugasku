@@ -17,7 +17,6 @@ import { deleteMyAccount, deleteClass } from '../api/destructive.js';
 import { toast } from '../components/toast.js';
 import { openDestructiveDialog } from '../components/modal.js';
 import { invisibleCaptcha } from '../components/turnstile.js';
-import { showTutorial } from '../components/tutorial.js';
 import { listLoginSessions, endLoginSession } from '../api/sessions.js';
 import { relativeTime, formatDeadline } from '../utils/datetime.js';
 import { STORAGE_KEYS } from '../utils/storageKeys.js';
@@ -474,16 +473,6 @@ export const profileView = async ({
     form,
     passwordSection(user),
     accountSettings(user),
-    el('section', { class: 'panel glass' },
-      el('h2', {}, 'Bantuan'),
-      el('p', { class: 'muted small' },
-        'Baru pertama pakai TugasKu atau lupa cara pakainya? Buka lagi panduan langkah demi langkah.'),
-      el('button', {
-        class: 'btn btn-soft',
-        type: 'button',
-        onclick: () => showTutorial(),
-      }, 'Ulangi tutorial'),
-    ),
     el('section', { class: 'panel glass' },
       el('h2', {}, 'Kelas kamu'),
       el('div', { class: 'stack' },
