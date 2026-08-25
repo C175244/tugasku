@@ -32,7 +32,7 @@ export const taskCard = (task, status = 'pending') => {
       el('span', { class: 'muted' },
         `${task.subject || 'Tanpa mapel'} · Prioritas ${priorityLabel(task.priority)}`,
       ),
-      countdown(task.deadline_at),
+      countdown(task.deadline_at, task),
     ),
     el('div', { class: 'muted small' },
       `Deadline: ${formatDeadline(task.deadline_at)}`,

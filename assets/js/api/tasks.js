@@ -31,6 +31,27 @@ export const deleteTask = (id) => getSupabase()
   .delete()
   .eq('id', id);
 
+// Perpanjang deadline: deadline aktif tetap, setelah habis pindah ke baru.
+export const postponeTaskDeadline = (taskId, extensionDeadline, note) => getSupabase()
+  .rpc('postpone_task_deadline', {
+    p_task_id: taskId,
+    p_extension_deadline: extensionDeadline,
+    p_note: note,
+  });
+
+// Ubah deadline: langsung ganti deadline aktif (untuk koreksi seperti
+// tanggal merah, bukan perpanjangan sesi).
+export const extendTaskDeadline = (taskId, newDeadline, note) => getSupabase()
+  .rpc('extend_task_deadline', {
+    p_task_id: taskId,
+    p_new_deadline: newDeadline,
+    p_note: note,
+  });
+
+// Hapus media/tugas yang sudah lewat deadline (admin/owner/dev saja).
+export const deleteExpiredTaskMedia = (taskId) => getSupabase()
+  .rpc('delete_expired_task_media', { p_task_id: taskId });
+
 export const cleanupTasks = () => getSupabase().rpc(
   'cleanup_expired_tasks',
   { p_days: 90 },

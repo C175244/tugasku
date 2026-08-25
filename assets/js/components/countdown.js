@@ -24,7 +24,13 @@ const tick = () => {
       return;
     }
     if (counter.node.isConnected) counter.wasConnected = true;
-    const diff = new Date(counter.deadline).getTime() - Date.now();
+    // Bila ada perpanjangan: deadline aktif sudah habis → berlanjut ke
+    // extension_deadline di kolom tugas.
+    const effective = counter.task?.extension_deadline
+      && new Date(counter.task.deadline_at).getTime() <= Date.now()
+        ? counter.task.extension_deadline
+        : counter.task?.deadline_at || counter.deadline;
+    const diff = new Date(effective).getTime() - Date.now();
     counter.node.textContent = diff < 0
       ? 'Lewat deadline'
       : `Sisa ${format(diff)}`;
@@ -34,18 +40,18 @@ const tick = () => {
 
 setInterval(tick, 1000);
 
-export const countdown = (deadline) => {
+export const countdown = (deadline, task = null) => {
   const node = el('span', {
     class: 'countdown',
     'data-deadline': deadline,
   });
-  const counter = {
-    node,
-    deadline,
-    wasConnected: false,
-  };
+  const counter = { node, deadline, task, wasConnected: false };
   counters.add(counter);
-  const diff = new Date(deadline).getTime() - Date.now();
+  const effective = task?.extension_deadline
+    && new Date(task.deadline_at).getTime() <= Date.now()
+      ? task.extension_deadline
+      : deadline;
+  const diff = new Date(effective).getTime() - Date.now();
   node.textContent = diff < 0
     ? 'Lewat deadline'
     : `Sisa ${format(diff)}`;

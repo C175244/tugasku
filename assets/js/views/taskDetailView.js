@@ -3,9 +3,14 @@ import { el } from '../utils/dom.js';
 import { header } from '../components/header.js';
 import { bottomNav } from '../components/navTabs.js';
 import { countdown } from '../components/countdown.js';
-import { formatDeadline, DAY_NAMES, relativeTime } from '../utils/datetime.js';
+import { formatDeadline, DAY_NAMES, relativeTime, toLocalInput } from '../utils/datetime.js';
 import { upsertProgress } from '../api/progress.js';
-import { deleteTask } from '../api/tasks.js';
+import {
+  deleteTask,
+  postponeTaskDeadline,
+  extendTaskDeadline,
+  deleteExpiredTaskMedia,
+} from '../api/tasks.js';
 import {
   listFiles,
   signedUrl,
@@ -19,6 +24,7 @@ import {
 } from '../api/comments.js';
 import { getClassRole } from '../api/classes.js';
 import { commentField, commentGuard } from '../components/commentGuard.js';
+import { openModal } from '../components/modal.js';
 import { toast } from '../components/toast.js';
 import { progressFor } from '../store.js';
 import { formatBytes, titleCase } from '../utils/format.js';
@@ -27,6 +33,82 @@ import {
   isOwnerOrDeveloper,
   roleLabel,
 } from '../utils/roles.js';
+
+// Dialog: atur deadline tugas. Tiga pilihan: (1) perpanjang — deadline aktif
+// tetap berlaku; begitu habis otomatis berlanjut ke waktu baru + catatan;
+// (2) mengubah langsung deadline aktif dengan catatan "deadline diubah";
+// (3) hapus tugas/media yang sudah lewat deadline. Akses: owner/admin/dev.
+const manageDeadlineDialog = (task, onChanged) => {
+  const isPast = new Date(task.deadline_at) < new Date();
+  const extendInput = el('input', {
+    type: 'datetime-local',
+    required: true,
+    min: toLocalInput(task.deadline_at),
+  });
+  const noteInput = el('input', {
+    maxlength: '120',
+    placeholder: 'Alasan (misalnya: ulangan sesi 2, tanggal merah)',
+  });
+
+  const error = el('p', { class: 'error' });
+  const form = el('form', {
+    class: 'stack',
+    onsubmit: async (event) => {
+      event.preventDefault();
+      error.textContent = '';
+      const when = new Date(extendInput.value);
+      if (isNaN(when.getTime())) { error.textContent = 'Isi tanggal dan jam.'; return; }
+      try {
+        // Kalau perpanjang (ada deadline aktif masa depan): pinjam sampai
+        // habis; lalu otomatis berlanjut ke deadline baru.
+        if (!isPast) {
+          const r = await postponeTaskDeadline(
+            task.id,
+            when.toISOString(),
+            noteInput.value.trim() || null,
+          );
+          if (r.error) throw r.error;
+          toast(`Deadline akan diperpanjang ke ${formatDeadline(when.toISOString())} setelah deadline saat ini habis.`);
+        } else {
+          // Sudah lewat: perubahan langsung dengan label "deadline diubah".
+          const r = await extendTaskDeadline(
+            task.id,
+            when.toISOString(),
+            noteInput.value.trim() || null,
+          );
+          if (r.error) throw r.error;
+          toast(`Deadline diubah ke ${formatDeadline(when.toISOString())}.`);
+        }
+        onChanged?.();
+        document.querySelector('.modal-backdrop')?.remove();
+      } catch (err) {
+        error.textContent = err.message || 'Gagal menyimpan.';
+      }
+    },
+  },
+  el('p', { class: 'muted small' },
+    task.original_deadline
+      ? `Deadline awal: ${formatDeadline(task.original_deadline)}. `
+      : '',
+    task.deadline_changed_at
+      ? 'Deadline ini sudah pernah diubah sebelumnya.'
+      : '',
+  ),
+  el('div', { class: 'field' },
+    el('label', {}, 'Deadline baru'),
+    extendInput,
+  ),
+  el('div', { class: 'field' },
+    el('label', {}, 'Catatan / alasan'),
+    noteInput,
+  ),
+  error,
+  el('button', { class: 'btn btn-primary', type: 'submit' },
+    isPast ? 'Ubah deadline' : 'Perpanjang deadline'),
+  );
+
+  openModal('Kelola deadline', form);
+};
 
 export const taskDetailView = async ({
   task,
@@ -246,6 +328,11 @@ export const taskDetailView = async ({
       class: 'btn btn-soft',
       href: `#/tugas/${task.id}/edit`,
     }, 'Edit'),
+    canManage && el('button', {
+      class: 'btn btn-soft',
+      type: 'button',
+      onclick: () => manageDeadlineDialog(task, onChanged),
+    }, 'Kelola deadline'),
     canEdit && el('button', {
       class: 'btn btn-danger-outline',
       type: 'button',
@@ -276,8 +363,14 @@ export const taskDetailView = async ({
           }, status === 'done' ? 'Sudah dikerjakan' : 'Belum dikerjakan'),
         ),
       ),
-      countdown(task.deadline_at),
+      countdown(task.deadline_at, task),
       el('h1', {}, task.title),
+      task.deadline_changed_at && el('span', { class: 'badge' },
+        task.extension_deadline ? 'Diperpanjang' : 'Deadline diubah',
+      ),
+      task.extension_note && el('p', { class: 'muted small' },
+        `Catatan: ${task.extension_note}`,
+      ),
       task.description && el('p', { class: 'muted' }, task.description),
       el('p', { class: 'muted small' },
         `${task.subject || 'Tanpa mapel'} · Deadline ${formatDeadline(task.deadline_at)}`,
