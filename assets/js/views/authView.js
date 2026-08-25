@@ -21,6 +21,10 @@ import {
 import { toggleTheme, getTheme } from '../theme.js';
 import { icon } from '../components/icons.js';
 
+// render dipanggil ulang (di main.js) setelah verifikasi Google selesai,
+// tapi di sini tidak bisa impor main.js (sirkular), jadi gunakan event.
+const renderApp = () => window.dispatchEvent(new CustomEvent('tugasku:render'));
+
 // Widget Turnstile yang tampil (centang "verify you are human"). Wajib lulus
 // setiap kali pengguna meminta kode/email verifikasi dikirim.
 const visibleCaptcha = () => {
@@ -265,7 +269,9 @@ export const resetSessionView = () => {
 };
 
 // Layar setelah formulir daftar terkirim: pengguna diminta membuka email dan
-// mengklik link verifikasi. Kirim ulang selalu minta captcha lagi.
+// mengklik link verifikasi. Kirim ulang selalu minta captcha lagi. Sebagai
+// alternatif tanpa email: masuk lewat Google dengan email yang sama — itu
+// cukup untuk mengaktifkan akun.
 const signupPendingView = (email, password, username) => {
   const captcha = visibleCaptcha();
   const error = el('p', { class: 'error' });
@@ -292,6 +298,28 @@ const signupPendingView = (email, password, username) => {
       resend.disabled = false;
     }
   });
+
+  // Alternatif tanpa email: masuk lewat Google memakai email yang sama.
+  const gError = el('p', { class: 'error' });
+  const gButton = el('button', {
+    class: 'btn btn-soft wide',
+    type: 'button',
+    onclick: () => {
+      gError.textContent = '';
+      signInGooglePopup((session) => {
+        if (!session) { gError.textContent = 'Login Google dibatalkan.'; return; }
+        const same = session.user?.email?.toLowerCase() === email.toLowerCase();
+        if (!same) {
+          gError.textContent = `Email Google (${session.user?.email}) beda dengan email yang didaftarkan.`;
+          return;
+        }
+        toast('Akun aktif. Selamat datang!');
+        location.hash = '#/dashboard';
+        renderApp();
+      });
+    },
+  }, 'Verifikasi lewat Google (tanpa email)');
+
   return el('main', { class: 'shell center auth-shell' },
     el('section', {
       class: 'panel glass auth-card',
@@ -302,10 +330,13 @@ const signupPendingView = (email, password, username) => {
     el('p', { class: 'muted small' },
       `Link verifikasi sudah dikirim ke ${email}. Klik link "Confirm email address" di email itu — akunmu langsung aktif dan kamu otomatis masuk.`),
     el('p', { class: 'muted small' },
-      'Email tidak sampai? Cek folder spam, atau kirim ulang di bawah ini.'),
+      'Email tidak sampai / linknya error? Cek folder spam, kirim ulang di bawah, atau pakai Google dengan email yang sama.'),
     captcha.box,
     error,
     resend,
+    el('p', { class: 'small muted' }, '— atau —'),
+    gButton,
+    gError,
     el('p', { class: 'small muted' },
       'Salah email? ',
       el('a', { href: '#/auth/signup' }, 'Daftar ulang'),

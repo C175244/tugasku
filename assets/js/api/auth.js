@@ -6,6 +6,14 @@ export const getSession = async () => {
   return result?.data?.session || null;
 };
 
+// Ambil data user TERBARU dari server (lebih segar daripada cache session).
+// Diperlukan untuk membaca daftar identities tepat setelah tautan Google /
+// pasang password.
+export const getUser = async () => {
+  const result = await getSupabase()?.auth.getUser();
+  return result?.data?.user || null;
+};
+
 export const signInGoogle = async () => {
   const supabase = getSupabase();
   return supabase.auth.signInWithOAuth({

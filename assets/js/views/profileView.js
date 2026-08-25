@@ -8,6 +8,7 @@ import {
   reauthenticate,
   updatePasswordWithNonce,
   getSession,
+  getUser,
   signInGooglePopup,
   hasPasswordIdentity,
 } from '../api/auth.js';
@@ -116,12 +117,18 @@ const passwordSection = (user) => {
   // sudah punya password.
   let hasPassword = hasPasswordIdentity(user)
     || Boolean(localStorage.getItem(STORAGE_KEYS.passwordMask(user.id)));
+
   const email = user?.email || '';
-  const intro = hasPassword
-    ? 'Kode verifikasi akan dikirim ke email akunmu sebelum password bisa diganti.'
-    : 'Akunmu masuk lewat Google dan belum punya password. Pasang password supaya bisa masuk dengan email juga. Kode verifikasi dikirim ke email akunmu.';
+  const intro = el('p', { class: 'muted small' });
+  const showIntro = () => {
+    intro.textContent = hasPassword
+      ? 'Kode verifikasi dikirim ke email akunmu sebelum password bisa diganti.'
+      : 'Akunmu masuk lewat Google dan belum punya password. Pasang password supaya bisa masuk dengan email juga. Kode verifikasi dikirim ke email akunmu.';
+  };
+  showIntro();
   const error = el('p', { class: 'error' });
   let sent = false;
+
   // Captcha tak-kasat-mata, wajib lolos setiap kali kode diminta.
   const getCaptchaToken = invisibleCaptcha();
 
@@ -261,7 +268,7 @@ const passwordSection = (user) => {
         el('p', { class: 'eyebrow' }, 'Akun'),
         el('h2', {}, hasPassword ? 'Ganti password' : 'Pasang password'),
       ),
-      el('p', { class: 'muted small' }, intro),
+      intro,
       sendCode,
       el('p', { class: 'small muted' }, 'Email tidak sampai / kena batas? '),
       googleVerify,
@@ -269,6 +276,18 @@ const passwordSection = (user) => {
       error,
     );
   };
+
+  // Ambil user TERBARU dari server supaya identity email yang barusan
+  // ditautkan ikut kebaca — lalu perbarui status dan re-render begitu ada.
+  getUser().then((fresh) => {
+    if (!fresh?.identities) return;
+    if (fresh.identities.some((i) => i.provider === 'email')) {
+      hasPassword = true;
+      showIntro();
+      rerender();
+    }
+  }).catch(() => {});
+
   rerender();
   return box;
 };

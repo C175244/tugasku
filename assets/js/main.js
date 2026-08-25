@@ -314,4 +314,6 @@ onAuthChange?.((event, session) => {
   }, 0);
 });
 window.addEventListener('hashchange', render);
+// Dipicu dari layar lain (misalnya verifikasi Google di alur daftar).
+window.addEventListener('tugasku:render', render);
 render();
