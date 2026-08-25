@@ -1,11 +1,9 @@
--- Signup yang belum terverifikasi tidak boleh mengambil username. Sebelum
--- ini handle_new_user() langsung membuat profiles, sehingga username sudah
--- terpakai di bawa email konfirmasi dibatalkan. Sekarang profil dibuat hanya
--- bila email_confirmed_at sudah diisi (untuk OAuth/Ganti agama); email
--- signup memakai trigger konfirmasi yang mengarah ke pemilik.
+-- Signup yang belum terverifikasi tidak boleh mengambil username. Profil
+-- dibuat lewat helper internal; handle_new_user dan handle_email_confirmed
+-- memanggil helper itu (memanggil fungsi trigger langsung tidak bisa).
 
-create or replace function public.handle_new_user()
-returns trigger
+create or replace function public.profile_from_user(u auth.users)
+returns void
 language plpgsql
 security definer
 set search_path = public
@@ -14,16 +12,9 @@ declare
   base_username text;
   final_username text;
 begin
-  -- Untuk signup email (membutuhkan konfirmasi email), jangan langsung buat
-  -- profil: tunggu email_confirmed_at agar username-nya tidak terkunci. Ini
-  -- memungkinkan orang lain memakai username yang sama sampai konfirmasi.
-  if new.email_confirmed_at is null and (new.raw_user_meta_data->>'username') is not null then
-    return new;
-  end if;
-
   base_username := coalesce(
-    nullif(regexp_replace(coalesce(new.raw_user_meta_data->>'username', ''), '[^a-zA-Z0-9_.]', '', 'g'), ''),
-    nullif(regexp_replace(split_part(coalesce(new.email, 'user'), '@', 1), '[^a-zA-Z0-9_.]', '', 'g'), ''),
+    nullif(regexp_replace(coalesce(u.raw_user_meta_data->>'username', ''), '[^a-zA-Z0-9_.]', '', 'g'), ''),
+    nullif(regexp_replace(split_part(coalesce(u.email, 'user'), '@', 1), '[^a-zA-Z0-9_.]', '', 'g'), ''),
     'user'
   );
   if char_length(base_username) < 3 then
@@ -42,17 +33,32 @@ begin
 
   insert into public.profiles (id, username, full_name, avatar_url)
   values (
-    new.id,
+    u.id,
     final_username,
-    coalesce(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name'),
-    new.raw_user_meta_data->>'avatar_url'
+    coalesce(u.raw_user_meta_data->>'full_name', u.raw_user_meta_data->>'name'),
+    u.raw_user_meta_data->>'avatar_url'
   )
   on conflict (id) do nothing;
+end;
+$$;
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  -- Untuk signup email (membutuhkan konfirmasi email), jangan langsung buat
+  -- profil: tunggu email_confirmed_at agar username-nya tidak terkunci.
+  if new.email_confirmed_at is null and (new.raw_user_meta_data->>'username') is not null then
+    return new;
+  end if;
+  perform public.profile_from_user(new);
   return new;
 end;
 $$;
 
--- Versi trigger eksekusi saat hanya email konfirmasi berubah menjadi terisi.
 create or replace function public.handle_email_confirmed()
 returns trigger
 language plpgsql
@@ -61,7 +67,7 @@ set search_path = public
 as $$
 begin
   if old.email_confirmed_at is null and new.email_confirmed_at is not null then
-    return public.handle_new_user(new);
+    perform public.profile_from_user(new);
   end if;
   return new;
 end;
