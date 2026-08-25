@@ -36,7 +36,11 @@ export const showLatestAnnouncement = async () => {
 export const announcementView = ({ announcements = [] }) => el(
   'main',
   { class: 'shell' },
-  header({ title: 'Pengumuman' }),
+  header({
+    title: 'Pengumuman',
+    back: true,
+    onBack: () => { location.hash = '#/dashboard'; },
+  }),
   el('section', { class: 'panel glass' },
     el('h1', {}, 'Pengumuman'),
     el('p', { class: 'muted' }, 'Pesan dari developer untuk semua pengguna.'),

@@ -7,4 +7,5 @@ export const STORAGE_KEYS = {
   cleanup: 'tugasku.cleanup90',
   announcementSeen: 'tugasku.announcementSeen',
   tutorial: (userId) => `tugasku.tutorial.${userId}`,
+  passwordMask: (userId) => `tugasku.passwordMask.${userId}`,
 };

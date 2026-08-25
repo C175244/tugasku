@@ -14,14 +14,102 @@ import { toast } from '../components/toast.js';
 import { openDestructiveDialog } from '../components/modal.js';
 import { invisibleCaptcha } from '../components/turnstile.js';
 import { showTutorial } from '../components/tutorial.js';
+import { listLoginSessions, endLoginSession } from '../api/sessions.js';
+import { relativeTime, formatDeadline } from '../utils/datetime.js';
+import { STORAGE_KEYS } from '../utils/storageKeys.js';
 import { progressFor } from '../store.js';
 import { roleLabel } from '../utils/roles.js';
+
+// Pengaturan akun: info akun, keamanan (password tersensor), dan daftar
+// perangkat yang sedang login beserta waktu — perangkat lain bisa
+// dikeluarkan supaya harus masuk ulang.
+const accountSettings = (user) => {
+  const email = user?.email || '—';
+  const joinedAt = user?.created_at ? formatDeadline(user.created_at) : '—';
+  const lastLogin = user?.last_sign_in_at ? relativeTime(user.last_sign_in_at) : '—';
+  const mask = localStorage.getItem(STORAGE_KEYS.passwordMask(user.id))
+    || '— (belum dipasang di perangkat ini)';
+  const sessionList = el('div', { class: 'stack' });
+
+  const paintSessions = (sessions) => {
+    sessionList.replaceChildren(
+      ...(sessions.length
+        ? sessions.map((s) => el('div', {
+          class: 'panel glass stack',
+          style: 'padding:12px;gap:4px',
+        },
+        el('div', { class: 'row space' },
+          el('strong', {}, s.current ? 'Perangkat ini' : 'Perangkat lain'),
+          s.current
+            ? el('span', { class: 'badge' }, 'Sedang dipakai')
+            : el('button', {
+              class: 'btn btn-soft',
+              type: 'button',
+              onclick: async () => {
+                const { error } = await endLoginSession(s.session_id);
+                if (error) toast(error.message, 'error');
+                else {
+                  toast('Perangkat itu dikeluarkan. Di sana harus masuk ulang.');
+                  loadSessions();
+                }
+              },
+            }, 'Keluar dari sini'),
+        ),
+        el('p', { class: 'muted small' }, s.user_agent || 'Perangkat tidak dikenal'),
+        el('p', { class: 'muted small' },
+          `Masuk ${relativeTime(s.created_at)}${s.ip ? ` · IP ${s.ip}` : ''}`),
+        ))
+        : [el('p', { class: 'muted small' }, 'Belum ada sesi lain.')]),
+    );
+  };
+
+  const loadSessions = async () => {
+    sessionList.replaceChildren(el('p', { class: 'muted small' }, 'Memuat perangkat…'));
+    const { data, error } = await listLoginSessions();
+    if (error) {
+      sessionList.replaceChildren(el('p', { class: 'muted small' }, error.message));
+      return;
+    }
+    paintSessions(data || []);
+  };
+
+  loadSessions();
+
+  return el('section', { class: 'panel glass stack' },
+    el('p', { class: 'eyebrow' }, 'Akun'),
+    el('h2', {}, 'Pengaturan akun'),
+    el('div', { class: 'field' },
+      el('label', {}, 'Email'),
+      el('input', { readonly: true, value: email }),
+    ),
+    el('div', { class: 'row space' },
+      el('div', {},
+        el('p', { class: 'muted small' }, 'Terdaftar sejak'),
+        el('strong', {}, joinedAt),
+      ),
+      el('div', {},
+        el('p', { class: 'muted small' }, 'Login terakhir'),
+        el('strong', {}, lastLogin),
+      ),
+    ),
+    el('div', { class: 'panel glass', style: 'padding:12px' },
+      el('p', { class: 'muted small' }, 'Password'),
+      el('strong', { style: 'letter-spacing:2px' }, mask),
+      el('p', { class: 'muted small' },
+        'Demi keamanan hanya 2 karakter awal dan 2 akhir yang ditampilkan. Mask ini tersimpan di perangkat ini saat kamu memasang/mengganti password.'),
+    ),
+    el('p', { class: 'muted small' },
+      'Perangkat yang sedang login ke akunmu (perangkat lain bisa dikeluarkan):'),
+    sessionList,
+  );
+};
 
 // Ganti atau tambah password: kode reautentikasi dikirim ke email akun
 // (email ini bawaan Supabase hanya berisi kode, tanpa link). Untuk akun yang
 // login lewat Google saja, alur ini sekaligus memasang password pertama.
 const passwordSection = (user) => {
-  const hasPassword = hasPasswordIdentity(user);
+  // true setelah password benar-benar terpasang (meski akun tadinya Google).
+  let hasPassword = hasPasswordIdentity(user);
   const email = user?.email || '';
   const intro = hasPassword
     ? 'Kode verifikasi akan dikirim ke email akunmu sebelum password bisa diganti.'
@@ -90,9 +178,17 @@ const passwordSection = (user) => {
           code.value.trim(),
         );
         if (result.error) throw result.error;
-        toast(hasPassword
-          ? 'Password berhasil diganti.'
-          : 'Password terpasang. Sekarang kamu bisa masuk dengan email juga.');
+        // Password berhasil terpasang/diganti: simpan mask (2 awal + 2
+        // akhir, sisanya sensor) untuk ditampilkan di Pengaturan akun,
+        // dan tandai akun ini kini sudah punya password.
+        const wasGoogleOnly = !hasPassword;
+        const p = newPassword.value;
+        const mask = p.length <= 4 ? '••••' : `${p.slice(0, 2)}${'*'.repeat(Math.max(4, p.length - 4))}${p.slice(-2)}`;
+        localStorage.setItem(STORAGE_KEYS.passwordMask(user.id), mask);
+        hasPassword = true;
+        toast(wasGoogleOnly
+          ? 'Password terpasang. Sekarang kamu bisa masuk dengan email juga.'
+          : 'Password berhasil diganti.');
         sent = false;
         code.value = '';
         newPassword.value = '';
@@ -333,6 +429,7 @@ export const profileView = async ({
     ),
     form,
     passwordSection(user),
+    accountSettings(user),
     el('section', { class: 'panel glass' },
       el('h2', {}, 'Bantuan'),
       el('p', { class: 'muted small' },

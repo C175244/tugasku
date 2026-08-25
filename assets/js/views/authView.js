@@ -237,7 +237,9 @@ export const authView = (mode = 'signin', onDone) => {
   if (mode === 'forgot') return forgotView();
   const isSignUp = mode === 'signup';
   const getCaptchaToken = invisibleCaptcha();
-  const captcha = isSignUp ? visibleCaptcha() : null;
+  // Login maupun daftar sekarang sama-sama pakai captcha Cloudflare yang
+  // tampil (bukan invisible): wajib dicentang setiap kali masuk/daftar.
+  const captcha = visibleCaptcha();
   const email = el('input', {
     type: 'email',
     required: true,
@@ -263,7 +265,8 @@ export const authView = (mode = 'signin', onDone) => {
   const submit = async (event) => {
     event.preventDefault();
     error.textContent = '';
-    if (isSignUp && !captcha.ok()) {
+    // Setiap masuk/daftar wajib menandai captcha Cloudflare yang tampil.
+    if (!captcha.ok()) {
       error.textContent = 'Selesaikan dulu verifikasi bukan robot.';
       return;
     }
@@ -296,8 +299,11 @@ export const authView = (mode = 'signin', onDone) => {
         ));
         return;
       }
-      const captchaToken = await getCaptchaToken();
-      const result = await signIn(email.value.trim(), password.value, captchaToken);
+      const result = await signIn(
+        email.value.trim(),
+        password.value,
+        captcha.token(),
+      );
       if (result.error) throw result.error;
       toast('Berhasil masuk.');
       onDone();
@@ -336,7 +342,7 @@ export const authView = (mode = 'signin', onDone) => {
       el('label', {}, 'Password'),
       password,
     ),
-    isSignUp && captcha.box,
+    captcha.box,
     error,
     el('button', {
       class: 'btn btn-primary wide',
