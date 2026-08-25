@@ -56,8 +56,11 @@ export const requestPasswordReset = (email, captchaToken = null) => getSupabase(
 // password karena reauthentication aktif di proyek.
 export const reauthenticate = () => getSupabase().auth.reauthenticate();
 
-// Memverifikasi kode reautentikasi (memakai sesi aktif, tanpa perlu email).
-export const verifyReauthOtp = (token) => getSupabase().auth.verifyOtp({
+// Memverifikasi kode reautentikasi. GoTrue mewajibkan email (atau telepon)
+// ikut terkirim; tanpa itu muncul error "Only an email address or phone
+// number should be provided on verify".
+export const verifyReauthOtp = (email, token) => getSupabase().auth.verifyOtp({
+  email,
   token,
   type: 'reauthentication',
 });

@@ -75,7 +75,7 @@ const passwordSection = (user) => {
       event.preventDefault();
       error.textContent = '';
       try {
-        const check = await verifyReauthOtp(code.value.trim());
+        const check = await verifyReauthOtp(email, code.value.trim());
         if (check.error) throw check.error;
         const result = await updatePassword(newPassword.value);
         if (result.error) throw result.error;
