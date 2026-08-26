@@ -25,3 +25,7 @@ export const deleteSchedule = (id) => getSupabase()
   .from('schedules')
   .delete()
   .eq('id', id);
+
+// Tambah/ubah catatan jadwal (admin/owner/dev) — muncul di Beranda.
+export const setScheduleNote = (scheduleId, note) => getSupabase()
+  .rpc('set_schedule_note', { p_schedule_id: scheduleId, p_note: note });

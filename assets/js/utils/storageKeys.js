@@ -8,4 +8,5 @@ export const STORAGE_KEYS = {
   announcementSeen: 'tugasku.announcementSeen',
   tutorial: (userId) => `tugasku.tutorial.${userId}`,
   passwordMask: (userId) => `tugasku.passwordMask.${userId}`,
+  notif: (userId) => `tugasku.notif.${userId}`,
 };

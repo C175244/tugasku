@@ -8,6 +8,16 @@ import { taskCard } from '../components/taskCard.js';
 import { filterBar } from '../components/filterBar.js';
 import { emptyState } from '../components/emptyState.js';
 import { progressFor } from '../store.js';
+import {
+  notifyNewTask,
+  nagDeadline,
+  notifOn,
+  setNotifOn,
+  askNotifPermission,
+  notifSupported,
+  notifPermission,
+} from '../components/notify.js';
+import { dailySchedulePanel } from '../components/dailySchedule.js';
 import { STORAGE_KEYS } from '../utils/storageKeys.js';
 
 const difficultyRank = {
@@ -49,11 +59,44 @@ export const dashboardView = ({
   profile,
   classes,
   tasks,
+  user,
+  schedules,
   onFilter,
 }) => {
   const upcoming = tasks.filter(
     (task) => new Date(task.deadline_at) > new Date(),
   );
+  // Checkbox notifikasi: minta izin dan simpan preferensi.
+  const notifButton = el('button', {
+    class: 'btn btn-soft icon-btn',
+    type: 'button',
+    'aria-label': 'Notifikasi tugas',
+    title: 'Notifikasi tugas <12 jam & tugas baru',
+  }, el('span', {}, notifOn(user.id) ? '🔔' : '🔕'));
+  notifButton.addEventListener('click', async () => {
+    if (notifOn(user.id)) {
+      setNotifOn(user.id, false);
+      notifButton.firstChild.textContent = '🔕';
+      toast('Notifikasi nonaktif.');
+      return;
+    }
+    if (notifSupported() && notifPermission() !== 'granted') {
+      if (!await askNotifPermission()) {
+        toast('Izin notifikasi ditolak. Aktifkan lewat setelan browser.', 'error');
+        return;
+      }
+    }
+    setNotifOn(user.id, true);
+    notifButton.firstChild.textContent = '🔔';
+    toast('Notifikasi aktif.');
+  });
+  // trigger notif untuk tugas baru dan deadline <12 jam
+  if (notifOn(user.id) && notifSupported()) {
+    for (const task of upcoming) {
+      notifyNewTask(task, user.id);
+      nagDeadline(task, user.id, progressFor(task.id));
+    }
+  }
   const subjects = [...new Set(
     upcoming.map((task) => task.subject).filter(Boolean),
   )];
@@ -68,12 +111,16 @@ export const dashboardView = ({
     header({ title: 'TugasKu' }),
     profileMenu(profile),
     hero(profile, classes),
+    dailySchedulePanel(schedules),
     el('div', { class: 'section-heading' },
       el('h2', {}, 'Tugas mendatang'),
-      el('a', {
-        class: 'btn btn-primary',
-        href: '#/tugas/baru',
-      }, '+ Tambah tugas'),
+      el('div', { class: 'row' },
+        notifButton,
+        el('a', {
+          class: 'btn btn-primary',
+          href: '#/tugas/baru',
+        }, '+ Tambah tugas'),
+      ),
     ),
     filters,
     list,

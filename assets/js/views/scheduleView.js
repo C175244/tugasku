@@ -5,6 +5,7 @@ import {
   createSchedule,
   updateSchedule,
   deleteSchedule,
+  setScheduleNote,
 } from '../api/schedules.js';
 import { toast } from '../components/toast.js';
 
@@ -123,6 +124,17 @@ export const scheduleView = ({
             else onChanged?.();
           },
         }, 'Hapus'),
+        el('button', {
+          class: 'btn btn-soft',
+          type: 'button',
+          onclick: async () => {
+            const note = prompt('Catatan jadwal (misalnya: seragam, materi khusus):', item.note || '');
+            if (note === null) return;
+            const result = await setScheduleNote(item.id, note.trim() || null);
+            if (result.error) toast(result.error.message, 'error');
+            else { toast('Catatan jadwal disimpan.'); onChanged?.(); }
+          },
+        }, item.note ? 'Ubah catatan' : 'Tambah catatan'),
       );
       list.append(el('div', { class: 'panel glass row space' },
         el('div', {},
@@ -131,6 +143,8 @@ export const scheduleView = ({
             `${item.start_time.slice(0, 5)}–${item.end_time.slice(0, 5)}`
               + ` · ${item.teacher || 'Guru belum diisi'}`,
           ),
+          item.note && el('div', { class: 'muted small', style: 'font-style:italic' },
+            `Catatan: ${item.note}`),
         ),
         actions,
       ));
