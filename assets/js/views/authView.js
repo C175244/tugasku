@@ -12,6 +12,7 @@ import {
   hasPasswordIdentity,
 } from '../api/auth.js';
 import { usernameAvailable } from '../api/profile.js';
+import { getSupabase } from '../supabaseClient.js';
 import { toast } from '../components/toast.js';
 import {
   invisibleCaptcha,
@@ -381,11 +382,14 @@ export const accessCodeView = (onDone) => {
         error.textContent = r?.error || 'Kode akses salah.';
         return;
       }
-      // Login membawa email yang terdaftar di access_codes (anomaliin synthetic).
+      // Login membawa email yang terdaftar di access_codes.
       const result = await signIn(r.email, password.value);
       if (result.error) { error.textContent = result.error.message; return; }
-      // Setelah masuk: wajib ganti password — mengangkat user tahsiri anecess.
-      startGoogleVerify(r.email, 'ganti-password', { user_id: r.user_id });
+      // Setelah masuk: wajib ganti password — user diarahkan langsung ke
+      // Profil → Pasang password yang ada opsi Google, tanpa redirect penuh.
+      toast('Masuk berhasil. Selesaikan di Profil untuk mengganti password.');
+      location.hash = '#/profil';
+      renderApp();
     },
   },
   el('div', { class: 'field' }, el('label', {}, 'Nama lengkap'), fullName),
