@@ -342,6 +342,78 @@ const signupPendingView = (email, password, username) => {
     )));
 };
 
+// Halaman login khusus akun massal (nama lengkap + kode akses + password).
+// Setelah kode benar, maukun massal pake email yang tersimpan di access_codes;
+// begitu masuk, pengguna WAJIB mengganti password lewat verifikasi Google.
+export const accessCodeView = (onDone) => {
+  const fullName = el('input', {
+    required: true,
+    placeholder: 'Nama lengkap',
+    autocomplete: 'name',
+  });
+  const code = el('input', {
+    required: true,
+    maxlength: '6',
+    placeholder: 'Kode akses 6 karakter',
+    autocomplete: 'off',
+    style: 'text-transform:uppercase',
+  });
+  const password = el('input', {
+    type: 'password',
+    required: true,
+    placeholder: 'Password sementara',
+    autocomplete: 'current-password',
+  });
+  const error = el('p', { class: 'error' });
+
+  const form = el('form', {
+    class: 'stack',
+    onsubmit: async (event) => {
+      event.preventDefault();
+      error.textContent = '';
+      // Panggil RPC: cocokkan nama + kode, ambil email dari access_codes.
+      const resp = await getSupabase().rpc('login_access_code', {
+        p_full_name: fullName.value.trim(),
+        p_code: code.value.trim().toUpperCase(),
+      });
+      const r = resp.data;
+      if (resp.error || !r?.ok) {
+        error.textContent = r?.error || 'Kode akses salah.';
+        return;
+      }
+      // Login membawa email yang terdaftar di access_codes (anomaliin synthetic).
+      const result = await signIn(r.email, password.value);
+      if (result.error) { error.textContent = result.error.message; return; }
+      // Setelah masuk: wajib ganti password — mengangkat user tahsiri anecess.
+      startGoogleVerify(r.email, 'ganti-password', { user_id: r.user_id });
+    },
+  },
+  el('div', { class: 'field' }, el('label', {}, 'Nama lengkap'), fullName),
+  el('div', { class: 'field' }, el('label', {}, 'Kode akses'), code),
+  el('div', { class: 'field' }, el('label', {}, 'Password sementara'), password),
+  error,
+  el('button', { class: 'btn btn-primary wide', type: 'submit' },
+    'Masuk & selesaikan di Google'),
+  el('p', { class: 'small muted' },
+    'Katakan "Masuk via kode akses" Kamu menggunakan kode ini untuk masuk. Setelah itu kamu akan diverifikasi lewat Google, lalu harus mengganti passwordmu. ',
+    el('a', { href: '#/auth/signin' }, 'Masuk pakai email biasa'),
+  ));
+
+  return el(
+    'main',
+    { class: 'shell center auth-shell' },
+    el('section', {
+      class: 'panel glass auth-card',
+      style: 'max-width:480px;width:100%',
+    },
+    brand(),
+    el('h1', {}, 'Masuk dengan kode akses'),
+    el('p', { class: 'muted small' },
+      'Untuk yang dibuatkan oleh sekolah: nama lengkap + kode akses + password generate.'),
+    form),
+  );
+};
+
 export const authView = (mode = 'signin', onDone) => {
   if (mode === 'forgot') return forgotView();
   const isSignUp = mode === 'signup';
@@ -501,6 +573,8 @@ export const authView = (mode = 'signin', onDone) => {
         }, isSignUp ? 'Masuk' : 'Daftar'),
         !isSignUp && ' · ',
         !isSignUp && el('a', { href: '#/auth/forgot' }, 'Lupa password'),
+        !isSignUp && ' · ',
+        !isSignUp && el('a', { href: '#/auth/kode' }, 'Masuk pakai kode akses'),
       ),
     ),
   );

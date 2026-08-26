@@ -13,7 +13,7 @@ import { setHead } from './components/head.js';
 import { loader } from './components/loader.js';
 import { toast } from './components/toast.js';
 import { setupView } from './views/setupView.js';
-import { authView, resetSessionView } from './views/authView.js';
+import { authView, resetSessionView, accessCodeView } from './views/authView.js';
 import { dashboardView } from './views/dashboardView.js';
 import { historyView } from './views/historyView.js';
 import { classListView } from './views/classListView.js';
@@ -145,6 +145,15 @@ const render = async () => {
   if (!session) {
     renderedUserId = null;
     const current = route();
+    // Login via kode akses (nama lengkap + kode + password) untuk akun massal.
+    if (current.id === 'kode') {
+      setHead('Masuk dengan kode akses');
+      app.replaceChildren(accessCodeView(() => {
+        location.hash = '#/dashboard';
+        render();
+      }));
+      return;
+    }
     setHead('Masuk');
     app.replaceChildren(authView(current.id || 'signin', () => {
       location.hash = '#/dashboard';
